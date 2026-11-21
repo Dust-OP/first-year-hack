@@ -9,7 +9,7 @@
 -- 1. One least-privilege role for the app -------------------------------
 USE ROLE USERADMIN;
 CREATE ROLE IF NOT EXISTS COMPASS_APP_ROLE
-  COMMENT = 'Career Compass backend: read/write its own three tables, nothing else';
+  COMMENT = 'Career Compass backend: read/write its own tables, nothing else';
 GRANT ROLE COMPASS_APP_ROLE TO ROLE SYSADMIN;
 
 -- 2. Compute and storage ------------------------------------------------
@@ -28,8 +28,8 @@ USE SCHEMA COMPASS_DB.APP;
 -- Times are epoch milliseconds so the app reads them without parsing.
 CREATE TABLE IF NOT EXISTS USERS (
   ID            STRING NOT NULL,
-  LOGTO_SUB     STRING,            -- Logto user id; NULL for quick sign-ups and demo bots
-  EMAIL         STRING,            -- verified by Logto; never shown to other users
+  LOGTO_SUB     STRING,            -- sign-in identity: Logto user id, or 'linkedin|<sub>'; NULL for quick sign-ups and demo bots
+  EMAIL         STRING,            -- verified by Logto; never shown to other users (a LinkedIn email goes to LINKEDIN_PROFILES)
   TOKEN_HASH    STRING,            -- SHA-256 of the session token; the token itself is never stored
   NAME          STRING NOT NULL,
   HEADLINE      STRING,
@@ -56,6 +56,48 @@ CREATE TABLE IF NOT EXISTS REQUESTS (
   CREATED_MS    NUMBER(15, 0),
   RESPONDED_MS  NUMBER(15, 0)
 );
+
+-- ---------------------------------------------------------------------
+-- Added 21 Nov 2026 for Sign in with LinkedIn and profile pictures.
+-- WRITTEN, NOT YET RUN on any account.
+-- MIGRATION for an account where this file was already run: run this
+-- block again, from "USE ROLE SYSADMIN" below to the end of section 2.
+-- Every statement is CREATE ... IF NOT EXISTS or a GRANT, so running it
+-- twice changes nothing, and the three tables above are not altered.
+-- Then check with:  npm run snowflake:check
+-- ---------------------------------------------------------------------
+USE ROLE SYSADMIN;
+USE SCHEMA COMPASS_DB.APP;
+
+-- What LinkedIn returned when a person signed in with LinkedIn: one row per
+-- user, refreshed only when that person signs in again (never on a schedule).
+-- Kept apart from USERS so it can be read by a later job and deleted on its
+-- own when the person asks. EMAIL here is never shown to other users.
+CREATE TABLE IF NOT EXISTS LINKEDIN_PROFILES (
+  USER_ID            STRING NOT NULL,   -- USERS.ID
+  LINKEDIN_SUB       STRING NOT NULL,   -- LinkedIn's id for this member; specific to our LinkedIn app
+  NAME               STRING,
+  GIVEN_NAME         STRING,
+  FAMILY_NAME        STRING,
+  EMAIL              STRING,            -- optional in LinkedIn's answer
+  EMAIL_VERIFIED     BOOLEAN,           -- optional in LinkedIn's answer
+  PICTURE_URL        STRING,            -- a LinkedIn media link; it can expire
+  LOCALE             STRING,            -- e.g. en-US
+  PROFILE_URL        STRING,            -- linkedin.com/in/... typed by the user; LinkedIn does not provide it
+  RAW_CLAIMS         VARIANT,           -- the userinfo answer exactly as received
+  FIRST_SEEN_MS      NUMBER(15, 0),
+  LAST_REFRESHED_MS  NUMBER(15, 0)
+);
+
+-- The photo a person picked on the profile form, if any: a 256 px JPEG as a data URL.
+CREATE TABLE IF NOT EXISTS USER_PHOTOS (
+  USER_ID     STRING NOT NULL,
+  PHOTO       STRING NOT NULL,
+  UPDATED_MS  NUMBER(15, 0)
+);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE LINKEDIN_PROFILES TO ROLE COMPASS_APP_ROLE;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE USER_PHOTOS       TO ROLE COMPASS_APP_ROLE;
 
 GRANT USAGE ON WAREHOUSE COMPASS_WH     TO ROLE COMPASS_APP_ROLE;
 GRANT USAGE ON DATABASE  COMPASS_DB     TO ROLE COMPASS_APP_ROLE;

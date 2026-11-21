@@ -45,12 +45,14 @@ first-year-hack/                  repository root
         │   ├── community-reception.md   17 candidates with community reception and tech feedback
         │   ├── showcase/                visual gallery: index.html + img/ screenshots of every candidate
         │   └── evidence/
-        └── snowflake-real-projects/   what Snowflake does in real projects, roles, live account check
-            ├── RESULT.md
-            ├── TASK.md                     task brief
-            ├── winners-a.md, winners-b-geo.md   source reads of 19 projects
-            ├── live-account-check.md       live trial check: roles, AI, ST_AZIMUTH range, Overture query
-            └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (draft not run; app/snowflake/setup.sql was)
+        ├── snowflake-real-projects/   what Snowflake does in real projects, roles, live account check
+        │   ├── RESULT.md
+        │   ├── TASK.md                     task brief
+        │   ├── winners-a.md, winners-b-geo.md   source reads of 19 projects
+        │   ├── live-account-check.md       live trial check: roles, AI, ST_AZIMUTH range, Overture query
+        │   └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (draft not run; app/snowflake/setup.sql was)
+        └── linkedin-integration/      what Sign In with LinkedIn returns, what it does not, what the terms allow us to keep
+            └── RESULT.md
 ```
 
 ## Folder roles
@@ -86,6 +88,8 @@ first-year-hack/                  repository root
 
 ## Open items
 
+- **Sign in with LinkedIn has not been run against the real LinkedIn**, only against a local stand-in. It needs a LinkedIn developer app; the steps are in `app/.env.example` and the checks to make afterwards in `findings/linkedin-integration/RESULT.md`.
+- **The Snowflake tables for LinkedIn records and photos do not exist on the team's account yet.** The app runs without them. The migration and its check are described in `app/README.md` (Snowflake).
 - **Reddit opinion on compass UI designs** has not been read; automated access was blocked. A teammate should check it in a normal browser and add it to `findings/compass-frontend-design/`.
 - **Event rules on track and prize stacking** are unconfirmed. Ask the organisers; the question text is in `findings/retro-compass-prior-art/rules-snowflake.md`.
 - **The app has not been run on a phone yet.** First check: open `app/` over HTTPS on one iPhone and one Android phone, outdoors, and record what the heading does.

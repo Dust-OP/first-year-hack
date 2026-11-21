@@ -18,12 +18,14 @@
     </nav>
   </header>
 
-  <!-- 0. Welcome: shown when email sign-in (Logto) is configured -->
+  <!-- 0. Welcome: shown when a real sign-in (LinkedIn or email through Logto) is configured -->
   <main id="view-welcome" hidden>
     <p class="lede">The compass used to point north. This one points at the person nearby you should be working with.</p>
     <div class="stack">
-      <button id="signin" class="primary" type="button">Sign in with email</button>
-      <p class="fine">We email you a one-time code. There is no password to remember.</p>
+      <button id="signin-linkedin" class="primary" type="button" hidden>Sign in with LinkedIn</button>
+      <p id="signin-linkedin-fine" class="fine" hidden>LinkedIn tells us your name, email address, profile photo and language setting, with its own id for you. We keep them, with the time you signed in, and read them again only when you sign in again. People near you see your name and photo while your compass is open; your email is never shown to anyone. You can delete this record at any time under People; we then keep only the LinkedIn id that lets you sign in again.</p>
+      <button id="signin" class="primary" type="button" hidden>Sign in with email</button>
+      <p id="signin-fine" class="fine" hidden>We email you a one-time code. There is no password to remember.</p>
       <p id="welcome-error" class="error" role="alert" hidden></p>
       <button id="quick" class="ghost" type="button" hidden>Try the demo without an account</button>
     </div>
@@ -36,11 +38,15 @@
       <label>Your name <input name="name" autocomplete="name" required maxlength="60"></label>
       <label>What you do <input name="headline" placeholder="CS first year, King's College London" maxlength="100"></label>
       <label>Your LinkedIn profile <input name="linkedin" placeholder="linkedin.com/in/your-name" inputmode="url" autocapitalize="none" required></label>
+      <div class="photo-pick">
+        <img id="photo-preview" class="avatar" alt="" hidden>
+        <label>Your photo <span id="photo-hint">(optional: without one, people see your initials)</span> <input id="photo" type="file" accept="image/*"></label>
+      </div>
       <fieldset><legend>I can offer</legend><div class="chips" data-field="offers"></div></fieldset>
       <fieldset><legend>I am looking for</legend><div class="chips" data-field="seeks"></div></fieldset>
       <p id="signup-error" class="error" role="alert" hidden></p>
       <button id="signup-submit" class="primary" type="submit">Create my profile</button>
-      <p class="fine">People within 500 m who also use this app can see your name, what you do and your LinkedIn link while you have the compass open. They see a direction and a distance, never your position on a map. <a href="privacy.html">Privacy notice and your choices</a></p>
+      <p class="fine">People within 500 m who also use this app can see your name, photo, what you do and your LinkedIn link while you have the compass open. They see a direction and a distance, never your position on a map. We keep what you enter here. Your position is kept only while the compass is open, and only the latest one. <a href="privacy.html">Privacy notice and your choices</a></p>
     </form>
   </main>
 
@@ -51,6 +57,14 @@
       <button id="start" class="primary start" type="button">Start compass</button>
     </div>
     <p id="status" class="status" aria-live="polite">Tap “Start compass” and allow location and motion access.</p>
+    <!-- Shown when the phone gives no position: says why and what to do. Nobody is ever placed at a made-up position silently. -->
+    <div id="locate" class="row locate" role="alert" hidden>
+      <p id="locate-text"></p>
+      <div class="actions">
+        <button id="locate-retry" class="primary" type="button">Try again</button>
+        <button id="locate-demo" class="ghost" type="button" hidden>Use a demo position instead</button>
+      </div>
+    </div>
 
     <section id="card" class="card" hidden aria-live="polite"></section>
 
@@ -72,6 +86,7 @@
     <section><h2>Invitations for you</h2><div id="incoming" class="list"></div></section>
     <section><h2>Connections</h2><div id="connections" class="list"></div></section>
     <section><h2>Sent</h2><div id="outgoing" class="list"></div></section>
+    <section id="linkedin-data" hidden><h2>Your LinkedIn data</h2><div id="linkedin-record" class="list"></div></section>
   </main>
 
   <script src="vendor/cookieconsent/cookieconsent.umd.js"></script>

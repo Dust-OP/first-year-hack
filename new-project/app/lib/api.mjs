@@ -6,6 +6,7 @@
 // Clients only ever receive a bearing and a distance.
 
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { avatarUrl, initialsSvg, photoBytes, pictureExpired, readPhoto } from './avatar.mjs';
 import { offset } from './geo.mjs';
 import { matchScore, normTags } from './match.mjs';
 
@@ -13,6 +14,10 @@ const RADIUS_M = 500; // how far the compass "sees"
 const FRESH_MS = 45_000; // a location older than this is treated as offline
 const BOT_ACCEPT_MS = 4_000; // demo bots accept an invitation after this long
 const FOREVER = 32503680000000; // year 3000: demo bots never go stale
+const HANDOFF_MS = 60_000; // how long the page has to collect its session after coming back from LinkedIn
+const STATE_COOKIE = 'cc_li_state';
+const CLEAR_STATE = `${STATE_COOKIE}=; Path=/api/linkedin; Max-Age=0; HttpOnly; SameSite=Lax`;
+const PROFILE_BODY_MAX = 200_000; // the profile form may carry a small photo
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 const json = (body, status = 200) =>
@@ -27,21 +32,28 @@ export function normLinkedin(input) {
   return m ? `https://www.linkedin.com/in/${encodeURIComponent(decodeURIComponent(m[1]))}` : null;
 }
 
-/** What other people may see. */
+/** What other people may see. `picture` is always a URL an <img> can load from our own origin. */
 const profile = (u) => ({
   id: u.id, name: u.name, headline: u.headline, linkedin: u.linkedin, offers: u.offers, seeks: u.seeks, demo: Boolean(u.demo),
+  picture: avatarUrl(u.id),
 });
-/** What you may see about yourself. Email never goes to anyone else. */
-const self = (u) => ({ ...profile(u), email: u.email ?? null, needsProfile: !u.linkedin });
+const LINKEDIN_SUB = 'linkedin|'; // how a LinkedIn sign-in is told apart from a Logto one in the user's `sub`
+const signedInWith = (u) => (u.sub?.startsWith(LINKEDIN_SUB) ? 'linkedin' : u.sub ? 'email' : 'quick');
+/** What you may see about yourself. Email never goes to anyone else. `pictureVersion` makes a just-changed photo reload. */
+const self = (u, pictureVersion) => ({
+  ...profile(u), picture: avatarUrl(u.id, pictureVersion), email: u.email ?? null, needsProfile: !u.linkedin, signedInWith: signedInWith(u),
+});
 const newToken = () => randomBytes(24).toString('base64url');
 
-/** Validates the profile form. Returns { error } or the cleaned fields. */
+/** Validates the profile form. Returns { error } or { fields, photo } (photo: undefined = leave as it is). */
 function readProfile(b) {
   const name = clean(b.name, 60);
   const linkedin = normLinkedin(b.linkedin);
   if (name.length < 2) return { error: 'Please enter your name.' };
   if (!linkedin) return { error: 'Please enter your LinkedIn profile, e.g. linkedin.com/in/your-name.' };
-  return { name, headline: clean(b.headline, 100), linkedin, offers: normTags(b.offers), seeks: normTags(b.seeks) };
+  const { photo, error } = readPhoto(b.photo);
+  if (error) return { error };
+  return { photo, fields: { name, headline: clean(b.headline, 100), linkedin, offers: normTags(b.offers), seeks: normTags(b.seeks) } };
 }
 
 const DEMO_PEOPLE = [
@@ -55,19 +67,33 @@ const DEMO_PEOPLE = [
 /**
  * @param logto          { endpoint, appId } when email sign-in is configured, else null
  * @param verifyIdToken  from lib/logto.mjs; required when `logto` is set
+ * @param linkedin       from createLinkedin() in lib/linkedin.mjs when LinkedIn sign-in is configured, else null
+ * @param publicUrl      the app's own address when it is fixed; otherwise the address each request came in on
  */
-export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null }) {
+export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null, linkedin = null, publicUrl = null }) {
   // The quick sign-up has no email check. Once real sign-in is on, keep it only for demos.
-  const quickSignup = !logto || demo;
+  const quickSignup = (!logto && !linkedin) || demo;
+  // One-time codes that hand a finished LinkedIn sign-in over to the page. Kept in memory: one server process.
+  const handoffs = new Map(); // code -> { userId, expiresMs, state }
+  const originOf = (request) => (publicUrl || new URL(request.url).origin).replace(/\/+$/, '');
+  /** The `state` this browser was given when it started a LinkedIn sign-in, read from its cookie. */
+  const stateOf = (request) => new RegExp(`(?:^|;\\s*)${STATE_COOKIE}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1];
+  /**
+   * Photos and LinkedIn records ride along with a sign-up or sign-in. If the store cannot save one
+   * (for example on a database that is not ready for them), the person still gets in; it is logged.
+   */
+  const extra = async (what, run) => {
+    try { await run(); } catch (err) { console.error(`[api] ${what} was NOT saved:`, err.message); }
+  };
 
   async function auth(request) {
     const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
     return token ? store.getUserByTokenHash(sha(token)) : null;
   }
 
-  async function readBody(request) {
+  async function readBody(request, max = 10_000) {
     const text = await request.text();
-    if (text.length > 10_000) throw Object.assign(new Error('body too large'), { status: 413 });
+    if (text.length > max) throw Object.assign(new Error('body too large'), { status: 413 });
     try {
       return text ? JSON.parse(text) : {};
     } catch {
@@ -119,15 +145,126 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
 
   const routes = {
     'GET /api/health': async () =>
-      json({ ok: true, store: store.kind, demo, quickSignup, auth: logto ? { endpoint: logto.endpoint, appId: logto.appId } : null }),
+      json({
+        ok: true, store: store.kind, demo, quickSignup, auth: logto ? { endpoint: logto.endpoint, appId: logto.appId } : null,
+        // Only whether it is on. The client id and the secret stay on the server.
+        linkedin: linkedin ? { standIn: Boolean(linkedin.mock) } : null,
+      }),
 
     'POST /api/signup': async (request) => {
-      if (!quickSignup) return fail(403, 'Please sign in with your email.');
-      const p = readProfile(await readBody(request));
+      if (!quickSignup) return fail(403, 'Please sign in first.');
+      const p = readProfile(await readBody(request, PROFILE_BODY_MAX));
       if (p.error) return fail(400, p.error);
       const token = newToken();
-      const user = await store.createUser({ id: randomUUID(), sub: null, email: null, tokenHash: sha(token), ...p, demo: false });
+      const user = await store.createUser({ id: randomUUID(), sub: null, email: null, tokenHash: sha(token), ...p.fields, demo: false });
+      if (p.photo) await extra('the picked photo', () => store.setPhoto(user.id, p.photo));
       return json({ token, me: self(user) });
+    },
+
+    // ----- Sign in with LinkedIn: three steps, because the code exchange needs our client secret -----
+
+    // 1. The "Sign in with LinkedIn" button brings the browser here, and we send it on to LinkedIn.
+    'GET /api/linkedin/start': async (request) => {
+      if (!linkedin) return fail(404, 'LinkedIn sign-in is not set up on this server.');
+      const origin = originOf(request);
+      const state = newToken();
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: linkedin.authorizeUrl({ redirectUri: `${origin}/api/linkedin/callback`, state }),
+          // Remembered in this browser only, so the callback can tell it belongs to the sign-in started here.
+          'Set-Cookie': `${STATE_COOKIE}=${state}; Path=/api/linkedin; Max-Age=600; HttpOnly; SameSite=Lax${origin.startsWith('https:') ? '; Secure' : ''}`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    },
+
+    // 2. LinkedIn sends the browser back with a one-time code. We swap it (server to server, with the
+    //    secret), record what LinkedIn says about the member, and give the page a handoff code.
+    'GET /api/linkedin/callback': async (request) => {
+      if (!linkedin) return fail(404, 'LinkedIn sign-in is not set up on this server.');
+      const origin = originOf(request);
+      const q = new URL(request.url).searchParams;
+      const back = (key, value, keepState = false) => new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${origin}/#${key}=${encodeURIComponent(value)}`,
+          ...(keepState ? {} : { 'Set-Cookie': CLEAR_STATE }),
+          'Cache-Control': 'no-store',
+        },
+      });
+      const expected = stateOf(request);
+      if (q.get('error')) {
+        // Anyone can write a link to this address with any `error_description`, and nothing has been
+        // checked yet. So that text goes to the log, and the page is told only which of its own
+        // sentences to show: /#linkedin_error= carries one of the short codes in LINKEDIN_ERRORS
+        // (public/auth.js), never a sentence.
+        const cancelled = /^user_cancelled/.test(q.get('error'));
+        if (!cancelled) console.error('[linkedin] callback error:', clean(q.get('error'), 60), clean(q.get('error_description'), 200));
+        return back('linkedin_error', cancelled ? 'cancelled' : 'failed');
+      }
+      // `state` proves this return belongs to the sign-in this browser started.
+      if (!expected || !q.get('code') || q.get('state') !== expected) return back('linkedin_error', 'interrupted');
+
+      let member;
+      try {
+        member = await linkedin.memberFor({ code: q.get('code'), redirectUri: `${origin}/api/linkedin/callback` });
+      } catch (err) {
+        // The reason (LinkedIn's error name or status) stays in the log; the page gets a code.
+        console.error('[linkedin]', err.message);
+        return back('linkedin_error', /did not accept the sign-in/.test(err.message) ? 'refused' : /did not return a profile/.test(err.message) ? 'no_profile' : 'failed');
+      }
+      let user = await store.getUserBySub(LINKEDIN_SUB + member.sub);
+      if (!user) {
+        // First visit: an account with no profile yet. LinkedIn does not tell us the person's profile
+        // address, so they add it on the profile form and stay off every compass until then.
+        // Their email is kept in the LinkedIn record only.
+        user = await store.createUser({
+          id: randomUUID(), sub: LINKEDIN_SUB + member.sub, email: null, tokenHash: null,
+          name: clean(member.name || [member.givenName, member.familyName].filter(Boolean).join(' '), 60) || 'LinkedIn member',
+          headline: '', linkedin: null, offers: [], seeks: [], demo: false,
+        });
+      }
+      // Recorded now, while the person is signing in. It is never refreshed on a schedule.
+      await extra('the LinkedIn record', () => store.saveLinkedinProfile(user.id, { ...member, profileUrl: user.linkedin ?? null }, now()));
+
+      for (const [code, h] of handoffs) if (h.expiresMs < now()) handoffs.delete(code);
+      const code = newToken();
+      // The handoff belongs to this browser's `state`, and the cookie stays until this browser has collected its session.
+      handoffs.set(code, { userId: user.id, expiresMs: now() + HANDOFF_MS, state: expected });
+      return back('linkedin', code, true);
+    },
+
+    // 3. The page swaps the handoff code for its session token, so the token itself is never in a URL.
+    //    The code alone is not enough: a link carrying someone else's code (/#linkedin=<their code>)
+    //    would sign the person who opens it in to that other account. Only the browser that went
+    //    through LinkedIn still holds the state cookie, so only it may collect the session.
+    'POST /api/linkedin/session': async (request) => {
+      const code = String((await readBody(request)).code ?? '');
+      const handoff = handoffs.get(code);
+      handoffs.delete(code);
+      const state = stateOf(request);
+      const mine = Boolean(handoff && state) && handoff.expiresMs >= now() && handoff.state === state;
+      const [user] = mine ? await store.getUsers([handoff.userId]) : [];
+      if (!user) return fail(401, 'That sign-in has expired. Please sign in again.');
+      const token = newToken();
+      await store.setUserToken(user.id, sha(token));
+      const res = json({ token, me: self(user) });
+      res.headers.set('Set-Cookie', CLEAR_STATE);
+      return res;
+    },
+
+    // What we hold from LinkedIn about the caller, and the way to have it deleted.
+    'GET /api/linkedin/me': async (request) => {
+      const me = await auth(request);
+      if (!me) return fail(401, 'Not signed in.');
+      return json({ profile: signedInWith(me) === 'linkedin' ? await store.getLinkedinProfile(me.id) : null });
+    },
+    'POST /api/linkedin/forget': async (request) => {
+      const me = await auth(request);
+      if (!me) return fail(401, 'Not signed in.');
+      await store.deleteLinkedinProfile(me.id);
+      return json({ ok: true });
     },
 
     // Email sign-in: the browser signed in at Logto and brings us the ID token once.
@@ -159,9 +296,33 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     'POST /api/profile': async (request) => {
       const me = await auth(request);
       if (!me) return fail(401, 'Not signed in.');
-      const p = readProfile(await readBody(request));
+      const p = readProfile(await readBody(request, PROFILE_BODY_MAX));
       if (p.error) return fail(400, p.error);
-      return json({ me: self(await store.updateUser(me.id, p)) });
+      const saved = await store.updateUser(me.id, p.fields);
+      if (p.photo !== undefined) await extra('the picked photo', () => store.setPhoto(me.id, p.photo));
+      if (signedInWith(me) === 'linkedin') await extra('the profile address in the LinkedIn record', () => store.setLinkedinProfileUrl(me.id, p.fields.linkedin));
+      return json({ me: self(saved, p.photo !== undefined ? now() : undefined) });
+    },
+
+    // The image behind every person's `picture` URL. No sign-in is asked: an <img> cannot send our
+    // token, and ids are random. It gives away a face or initials, never a position or an email.
+    'GET /api/avatar': async (request) => {
+      const id = new URL(request.url).searchParams.get('id') ?? '';
+      // On a Snowflake account without the photo and LinkedIn tables the store answers with the name only.
+      // Should that lookup fail for any other reason, initials are still better than a broken image.
+      const a = await store.getAvatar(id).catch(async (err) => {
+        console.error('[api] picture lookup failed, serving initials:', err.message);
+        const [u] = await store.getUsers([id]);
+        return u ? { name: u.name, photo: null, picture: null } : null;
+      });
+      if (!a) return fail(404, 'Not found.');
+      const headers = { 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" };
+      if (a.photo) return new Response(photoBytes(a.photo), { headers: { ...headers, 'Content-Type': 'image/jpeg' } });
+      // The LinkedIn picture is fetched and passed on, not redirected to: the <img> stays on our origin,
+      // the viewer's browser never contacts LinkedIn, and a dead link turns into initials instead of a broken image.
+      const fromLinkedin = a.picture && linkedin && !pictureExpired(a.picture, now()) ? await linkedin.picture(a.picture) : null;
+      if (fromLinkedin) return new Response(fromLinkedin.bytes, { headers: { ...headers, 'Content-Type': fromLinkedin.type } });
+      return new Response(initialsSvg(a.name, id), { headers: { ...headers, 'Content-Type': 'image/svg+xml; charset=utf-8' } });
     },
 
     'GET /api/me': async (request) => {

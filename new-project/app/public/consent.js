@@ -8,7 +8,7 @@
 //   showing your profile and direction to people nearby. The notice offers to change your mind.
 // - Bump REVISION whenever privacy.html changes in substance, and everyone is asked again.
 (() => {
-  const REVISION = 1;
+  const REVISION = 2; // 2: pictures are shown to people nearby; sign-in with LinkedIn (21 Nov 2026)
   // On the privacy notice itself, don't block the page: people must be able to read it first.
   const onPrivacyPage = /privacy\.html$/.test(location.pathname);
   const CC = window.CookieConsent;
@@ -40,7 +40,7 @@
         <p>Career Compass only works by showing your profile, and the direction and distance to you,
            to people within 500 m. Without that there is nothing for the needle to point at,
            so the app stays closed. ${localStorage.getItem('cc.token')
-             ? 'The compass has stopped and your position has been removed. Your profile and invitations stay stored until the team deletes them.'
+             ? 'The compass has stopped and your position has been removed. Your profile, your photo, your invitations and anything kept from LinkedIn stay stored until the team deletes them.'
              : 'Nothing about you has been sent to our server. A cookie on this device remembers this choice.'}</p>
         <p><a href="privacy.html">Read what the app stores and why</a></p>
         <button type="button" class="consent-declined__retry">Change my mind</button>
@@ -98,7 +98,7 @@
             title: 'Before you start',
             description:
               'Career Compass points you at people nearby you should be working with. ' +
-              'To do that, people within 500 m who also have the app open can see your name, ' +
+              'To do that, people within 500 m who also have the app open can see your name, your picture (a photo or your initials), ' +
               'what you do, your LinkedIn link and what you offer and seek, plus <b>a direction and a distance</b> to you. ' +
               'They never see your position on a map. Only your latest position is kept, and it stops counting after 45 seconds. ' +
               '<a href="privacy.html">Privacy notice</a>',
@@ -122,13 +122,15 @@
                 title: 'Essential (always on)',
                 description:
                   'A random session token on this device so you stay signed in (the server keeps only a hash of it), ' +
-                  'and a small cookie that remembers this choice.',
+                  'a small cookie that remembers this choice, and, if you sign in with LinkedIn, a cookie that lasts at most ' +
+                  '10 minutes and ties that sign-in to this browser.',
                 linkedCategory: 'necessary',
               },
               {
                 title: 'Show me to people nearby',
                 description:
-                  'Your profile, and the direction and distance to you, are shown to people within 500 m who have the app open. ' +
+                  'Your profile (name, picture, what you do, LinkedIn link, what you offer and seek), and the direction and distance to you, ' +
+                  'are shown to people within 500 m who have the app open. ' +
                   'Your latest position is stored in Snowflake (London region) and replaced each time it updates; ' +
                   '“Go invisible” removes it; signing out or closing the page asks the server to remove it. The compass needs this to work.',
                 linkedCategory: 'nearby',

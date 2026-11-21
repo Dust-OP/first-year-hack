@@ -31,11 +31,22 @@
 
   <h2>What other people see</h2>
   <ul>
-    <li>On the compass: only signed-in people whose app reports a position within <b>500 m</b> of yours, and only while you are visible.</li>
-    <li>In the People tab: anyone you have invited, or who has invited you, keeps your name, what you do, your LinkedIn link and your tags in their list. That does not depend on distance, and it stays after you go invisible, sign out or decline.</li>
-    <li>Your name, what you do, your LinkedIn link, and what you offer and are looking for.</li>
+    <li>On the compass: only signed-in people whose app reports a position within <b>500 m</b> of yours, and only while you are visible and your own app is reporting a position.</li>
+    <li>In the People tab: anyone you have invited, or who has invited you, keeps your name, your picture, what you do, your LinkedIn link and your tags in their list. That does not depend on distance, and it stays after you go invisible, sign out or decline.</li>
+    <li>Your name, your picture, what you do, your LinkedIn link, and what you offer and are looking for.</li>
+    <li>Your <b>picture</b> is shown on your card on the compass and next to your name in the People tab. It is the photo you picked on the profile form. If you picked none and signed in with LinkedIn, it is your LinkedIn picture, for as long as LinkedIn's link to it works. Otherwise it is a coloured tile with your initials.</li>
+    <li>The picture is loaded from an address that contains a random ID for you and does <b>not</b> ask for sign-in. Anyone who has been shown that address (everyone who has had you on their compass or in their People tab) can load your current picture from it later, including after you go invisible or sign out. It gives a face or initials, never a position or an email address.</li>
     <li>A <b>direction and a distance</b> to you, measured from the position their app reports. The app never sends your coordinates to another user and shows no map, but a direction and a distance from a known spot are enough to work out where you are to within GPS accuracy, and the app does not check that the other person is really where their app says.</li>
     <li>If you sign in with email, your email address is <b>never</b> shown to other users. The name box is pre-filled with the part of your address before the @; change it if you do not want others to see that.</li>
+  </ul>
+
+  <h2>If you sign in with LinkedIn</h2>
+  <ul>
+    <li>You are sent to LinkedIn to sign in. LinkedIn then tells the app its own ID for you, your name (full, given and family), your email address and whether LinkedIn has verified it, the link to your profile photo, and your language setting. LinkedIn may leave the email out.</li>
+    <li>LinkedIn does <b>not</b> tell the app your profile address or what you do. The LinkedIn link other people see is the one <b>you type</b> on the profile form, and the app does not check that it is yours.</li>
+    <li>The app reads this at the moment you sign in, and again only when you sign in again, never in the background. The access LinkedIn grants is used for that one read and is not kept. The app asks LinkedIn only for sign-in, your basic profile and your email: it does not ask to post for you, to read your connections or to send connection requests. “Connect on LinkedIn” only opens the other person's LinkedIn link.</li>
+    <li>The name box is pre-filled with your LinkedIn name; you can change it. Other users see that name and your picture. Your LinkedIn email address, LinkedIn's ID for you and your language setting are <b>never</b> shown to other users.</li>
+    <li>Signing out of Career Compass does not sign you out of LinkedIn. On a shared device, sign out at linkedin.com as well.</li>
   </ul>
 
   <h2>What is stored, where and for how long</h2>
@@ -43,13 +54,19 @@
     <table>
       <tr><th>What</th><th>Where</th><th>How long</th></tr>
       <tr><td>Profile: name, what you do, LinkedIn link, what you offer and seek</td><td>The app's database in Snowflake, London (UK South) region</td><td>Until it is deleted. To have your account and invitations deleted, ask the team.</td></tr>
-      <tr><td>Your latest position and its accuracy</td><td>Snowflake, London region. One row per person: each update replaces the last, so the app keeps no history. Snowflake itself can restore replaced or deleted rows for a short period (Time Travel, 1 day by default, then 7 days of Fail-safe).</td><td>Shown to others for at most 45 seconds after your last update. “Go invisible” deletes it. Signing out or closing the page asks the server to delete it, but that request can be lost (no signal, or the phone closes the browser); the last position then stays in the database, not shown to anyone, until you next start the compass or your account is deleted.</td></tr>
+      <tr><td>Your latest position and its accuracy</td><td>Snowflake, London region. One row per person: each update replaces the last, so the app keeps no history. Snowflake itself can restore replaced or deleted rows for a short period (Time Travel, 1 day by default, then 7 days of Fail-safe).</td><td>Shown to others for at most 45 seconds after your last update. “Go invisible” deletes it. Signing out, closing the page, or your phone refusing location asks the server to delete it, but that request can be lost (no signal, or the phone closes the browser); the last position then stays in the database, not shown to anyone, until your app next reports a position, which replaces it, or your account is deleted.</td></tr>
       <tr><td>Invitations you send or receive, and whether they were accepted</td><td>Snowflake, London region</td><td>Until your account is deleted</td></tr>
-      <tr><td>A hash of your session token (not the token itself)</td><td>Snowflake, London region</td><td>Until your account is deleted. Signing out removes the token from your device only; the hash stays on the server and the token keeps working until you sign in again with email, which replaces it.</td></tr>
-      <tr><td>If you sign in with email: your sign-in ID and email address</td><td>Snowflake, London region, and the team's own sign-in server (Logto, at auth.dustpowered.studio), which emails the one-time code. That server is shared with the team's other project, Cila, so your email becomes a sign-in account there as well.</td><td>Until the team deletes it in both places.</td></tr>
+      <tr><td>A hash of your session token (not the token itself)</td><td>Snowflake, London region</td><td>Until your account is deleted. Signing out removes the token from your device only; the hash stays on the server and the token keeps working until you sign in again with LinkedIn or with email, which replaces it. An account made with “Try the demo without an account” cannot be signed in to again, so its token keeps working until the account is deleted.</td></tr>
+      <tr><td>If you sign in with email: your sign-in ID and email address</td><td>Snowflake, London region, and the team's own sign-in server (Logto, at auth.<wbr>dustpowered.<wbr>studio), which emails the one-time code. That server is shared with the team's other project, Cila, so your email becomes a sign-in account there as well.</td><td>Until the team deletes it in both places.</td></tr>
+      <tr><td>If you sign in with LinkedIn: your sign-in ID, which is LinkedIn's ID for you with <code>linkedin|</code> in front</td><td>Snowflake, London region, with your profile. Your LinkedIn email address is not put there.</td><td>Until your account is deleted. “Delete my LinkedIn data” does not remove it: it is how the app recognises you when you sign in again.</td></tr>
+      <tr><td>If you sign in with LinkedIn, the LinkedIn record: LinkedIn's ID for you; your name, given name and family name; your email address and whether LinkedIn says it is verified; the link to your LinkedIn photo; your language setting; the LinkedIn profile address you typed; LinkedIn's answer exactly as the app received it; and the times it was first recorded and last read</td><td>Snowflake, London region, in a table of its own, once the team has switched on the extra tables (see the note below).</td><td>Until you delete it with “Delete my LinkedIn data”, or the team deletes it. Each time you sign in with LinkedIn it is replaced with what LinkedIn says then; the first-recorded time is kept.</td></tr>
+      <tr><td>The photo you pick on the profile form, if you pick one. Your device crops it square and shrinks it to a 256 px JPEG before sending it; the original file is not uploaded.</td><td>Snowflake, London region, in a table of its own, once the team has switched on the extra tables (see the note below).</td><td>Until the team deletes it. Once your profile is saved, the page has no button yet to change or remove the photo.</td></tr>
     </table>
   </div>
+  <p class="note">The LinkedIn record and the photo need two extra database tables. On 21 November 2026 the team had not yet switched them on in its Snowflake account. Until it does, the app saves neither of them anywhere, no LinkedIn picture is shown, and everyone's picture is the tile with initials. Signing in with LinkedIn still creates your account, with the sign-in ID above and the name LinkedIn gave.</p>
+  <p class="note">Your LinkedIn photo itself is not stored. When someone's app loads your picture and you have picked no photo, the server fetches it from LinkedIn's link and passes it on, so that person's browser does not contact LinkedIn.</p>
   <p class="note">If the app runs without Snowflake (for example in an offline demo), the same data is kept only in the server's memory and disappears when it restarts.</p>
+  <p class="note">When the team puts the app on phones, it is reached through a temporary https address from Cloudflare that leads to the team's laptop. Everything your phone sends to the app and gets back, including your position and your session token, passes through Cloudflare's network on the way.</p>
 
   <h2>On your device</h2>
   <div class="card">
@@ -59,21 +76,27 @@
       <tr><td><code>cc_consent</code></td><td>Cookie, up to 6 months (Safari may shorten this to 7 days)</td><td>Remembers your choice in the “Before you start” dialog, including “No thanks”. It holds the choice, a random ID and the time you chose.</td></tr>
       <tr><td>Sign-in check values</td><td>Session storage</td><td>Only during email sign-in. Deleted as soon as you come back from the sign-in page.</td></tr>
       <tr><td>Sign-in session cookies</td><td>Cookies set by the sign-in server on its own address</td><td>Only if you sign in with email. They keep you signed in there until you sign out.</td></tr>
+      <tr><td><code>cc_li_state</code></td><td>Cookie, 10 minutes at most. Page scripts cannot read it (HttpOnly), and it is sent only to the app's own LinkedIn sign-in addresses (path <code>/api/linkedin</code>, SameSite=Lax, Secure on https).</td><td>Only if you tap “Sign in with LinkedIn”. A random value that ties the return from LinkedIn to this browser, so that a sign-in link made in someone else's browser cannot sign you in to their account. Deleted when the sign-in completes or is turned down on the way back from LinkedIn; otherwise it expires by itself.</td></tr>
+      <tr><td>LinkedIn's own cookies</td><td>Cookies set by LinkedIn on its own address</td><td>Only if you sign in with LinkedIn. LinkedIn's own privacy policy covers them. Signing out of Career Compass does not remove them or sign you out of LinkedIn.</td></tr>
+      <tr><td>Pictures of people you were shown</td><td>Browser cache, up to 5 minutes</td><td>So a picture is not fetched again on every update. Other people's browsers keep yours the same way.</td></tr>
     </table>
   </div>
   <p>There are no adverts, analytics or tracking cookies.</p>
 
   <h2>Why we use it</h2>
   <p>Only to point your compass at people nearby and let you invite them. We ask for your agreement before you start, and you can change your mind at any time. Your phone asks you separately before it shares your location; an iPhone also asks before sharing its motion sensors.</p>
+  <p>Of what LinkedIn tells it, the app today uses LinkedIn's ID for you (to recognise you when you sign in again), your name (to pre-fill the profile form) and the link to your photo (to show your picture), and it tells you in the People tab what it keeps. The rest (your email address, your language setting and LinkedIn's answer as received) is kept in the LinkedIn record for a possible later feature; no code uses it today.</p>
 
   <h2>Demo people</h2>
-  <p>During demos the app can place made-up “demo people” around you. They are not real users and are marked as demo data in the database.</p>
+  <p>During demos the app can place made-up “demo people” around you. They are not real users and are marked as demo data in the database. Their pictures are always tiles with initials, never photos.</p>
 
   <h2>Your choices</h2>
   <ul>
-    <li>Go invisible, or sign out, at any time: both buttons are under “Demo tools and what runs underneath” on the compass screen. Refusing location access does not hide you: the app then uses a fixed demo position (Bush House) and still shows your profile to people near it.</li>
+    <li>Go invisible, or sign out, at any time: both buttons are under “Demo tools and what runs underneath” on the compass screen.</li>
+    <li>Refuse location access. The app never makes up a position for you: without one from your phone it reports none, you are on nobody's compass, nobody is on yours, and the page says why and what to do. If you had been sharing a position, the app asks the server to remove it. People you have exchanged invitations with still see you in their People tab. In demo mode the page then offers “Use a demo position instead”; only if you tap it does the app report a fixed demo position (Bush House, London) as yours and show your profile to people near that spot, including everyone else who chose it.</li>
+    <li>If you signed in with LinkedIn: see what the app keeps from LinkedIn, and delete it, in the People tab under “Your LinkedIn data”. “Delete my LinkedIn data” deletes the whole LinkedIn record described above: your LinkedIn email address, the link to your LinkedIn photo, your language setting, the name parts, LinkedIn's answer and the copies of LinkedIn's ID and of your profile address held in it. It does <b>not</b> delete your account, your profile in the app (including your name, which first came from LinkedIn, and the LinkedIn link you typed), a photo you picked, your invitations, or the sign-in ID that holds LinkedIn's ID for you. Your picture then becomes the photo you picked or your initials; a browser that has already loaded the old picture may go on showing it for up to 5 minutes. The record is made again the next time you sign in with LinkedIn. Like positions, deleted rows can be restored by Snowflake for a short period.</li>
     <li>Change your agreement: <button type="button" id="change-consent">Change my choice</button></li>
-    <li>Ask the team to delete your account and invitations.</li>
+    <li>Ask the team to delete your account, your photo and your invitations. The app itself has no button for that.</li>
   </ul>
   <p class="note">Last updated 21 November 2026.</p>
 </main>

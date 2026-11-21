@@ -6,6 +6,7 @@
 const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const random = (n) => b64url(crypto.getRandomValues(new Uint8Array(n)));
 const KEY = 'cc.signin';
+const SIGNIN_FAILED = 'Sign-in did not complete. Please try again.';
 
 export function createLogto({ endpoint, appId }) {
   const redirectUri = `${location.origin}/callback`;
@@ -32,7 +33,8 @@ export function createLogto({ endpoint, appId }) {
       const saved = JSON.parse(sessionStorage.getItem(KEY) || 'null');
       sessionStorage.removeItem(KEY);
       history.replaceState(null, '', '/'); // the code is single-use: take it out of the address bar
-      if (q.get('error')) throw new Error(q.get('error_description') || q.get('error'));
+      // Anyone can write a link to /callback with any `error_description`, so that text is never shown.
+      if (q.get('error')) throw new Error(SIGNIN_FAILED);
       // `state` proves this return belongs to the sign-in this browser started.
       if (!saved || !q.get('code') || q.get('state') !== saved.state) throw new Error('Sign-in was interrupted. Please try again.');
 
@@ -55,3 +57,37 @@ export function createLogto({ endpoint, appId }) {
     },
   };
 }
+
+/**
+ * Why a LinkedIn sign-in did not finish. The server (lib/api.mjs, /api/linkedin/callback) puts one
+ * of these codes in /#linkedin_error=; the sentences are ours. Anyone can write a link with anything
+ * after the "=", so whatever is not a code from this list gets the general sentence and is never shown.
+ */
+const LINKEDIN_ERRORS = new Map([
+  ['cancelled', 'You cancelled the LinkedIn sign-in.'],
+  ['failed', 'LinkedIn did not complete the sign-in. Please try again.'],
+  ['interrupted', 'Sign-in was interrupted. Please try again.'],
+  ['refused', 'LinkedIn did not accept the sign-in. Please try again.'],
+  ['no_profile', 'LinkedIn did not return a profile. Please try again.'],
+]);
+
+/**
+ * Sign in with LinkedIn. LinkedIn's code exchange needs a client secret, so our server does it
+ * (lib/linkedin.mjs) and the page has only two small jobs: start the trip, and on the way back
+ * pick up the one-time handoff code the server left in the URL fragment.
+ */
+export const linkedin = {
+  signIn() {
+    location.assign('/api/linkedin/start');
+  },
+  /**
+   * `{ code }` or `{ error }` when the server has just sent the browser back from LinkedIn, else null.
+   * `error` is always one of our own sentences, fit to show.
+   */
+  takeReturn() {
+    const q = new URLSearchParams(location.hash.slice(1));
+    if (!q.has('linkedin') && !q.has('linkedin_error')) return null;
+    history.replaceState(null, '', location.pathname + location.search); // single use: take it out of the address bar
+    return q.has('linkedin') ? { code: q.get('linkedin') } : { error: LINKEDIN_ERRORS.get(q.get('linkedin_error')) ?? SIGNIN_FAILED };
+  },
+};

@@ -8,6 +8,7 @@ Nothing in this folder is product code. Each entry file records its own adoption
 | [`retro-compass-prior-art/`](retro-compass-prior-art/) | What compass reinventions already exist? What are the event rules, the Snowflake options and the demo-video references? | [`SUMMARY.md`](retro-compass-prior-art/SUMMARY.md) |
 | [`compass-frontend-design/`](compass-frontend-design/) | Which front-end designs and tech should the compass dial use? (41 candidates from GitHub, Hacker News and design communities) | [`RESULT.md`](compass-frontend-design/RESULT.md) |
 | [`snowflake-real-projects/`](snowflake-real-projects/) | What does Snowflake actually do in real hackathon projects (source read, 19 projects), which roles do they set up, and what should our app's role/setup be? | [`RESULT.md`](snowflake-real-projects/RESULT.md) |
+| [`linkedin-integration/`](linkedin-integration/) | What does Sign In with LinkedIn return (and not return), how must the sign-in be built, and what do LinkedIn's API terms allow us to store? | [`RESULT.md`](linkedin-integration/RESULT.md) |
 
 ## Layout of a findings folder
 
