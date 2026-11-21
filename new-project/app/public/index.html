@@ -26,6 +26,15 @@
       <p id="signin-linkedin-fine" class="fine" hidden>LinkedIn tells us your name, email address, profile photo and language setting, with its own id for you. We keep them, with the time you signed in, and read them again only when you sign in again. People near you see your name and photo while your compass is open; your email is never shown to anyone. You can delete this record at any time under People; we then keep only the LinkedIn id that lets you sign in again.</p>
       <button id="signin" class="primary" type="button" hidden>Sign in with email</button>
       <p id="signin-fine" class="fine" hidden>We email you a one-time code. There is no password to remember.</p>
+      <!-- Sign in with an emailed code (public/email-code.js): ask for the address, then for the code -->
+      <form id="email-code" hidden novalidate>
+        <label id="ec-email-row">Your email <input id="ec-email" name="email" type="email" autocomplete="email" autocapitalize="none" inputmode="email" maxlength="254" required></label>
+        <label id="ec-code-row" hidden><span id="ec-sent">Enter the 6-digit code we emailed you</span> <input id="ec-code" name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" maxlength="6"></label>
+        <button id="ec-submit" class="primary" type="submit">Email me a sign-in code</button>
+        <button id="ec-resend" class="ghost" type="button" hidden>Send a new code</button>
+        <button id="ec-change" class="ghost" type="button" hidden>Use another email</button>
+        <p class="fine">We email you a 6-digit code from hello@wayrise.app. It works for 10 minutes. There is no password.</p>
+      </form>
       <p id="welcome-error" class="error" role="alert" hidden></p>
       <button id="quick" class="ghost" type="button" hidden>Try the demo without an account</button>
     </div>

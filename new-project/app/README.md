@@ -103,6 +103,17 @@ Android only (Chrome):
 | Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
 
+### Sign-in with an emailed code (wayrise.app)
+
+With `RESEND_API_KEY` in `.env`, the welcome screen asks for an email address and emails a 6-digit code from `hello@wayrise.app` through Resend. It behaves like Logto's email code (10 minutes, a minute between codes), but runs in this server, with no Cila accounts or branding. It replaces the Logto button when both are set up.
+
+- **Domain:** `wayrise.app` (Name.com) runs its DNS on Cloudflare. Resend sends from it (region eu-west-1, DKIM, SPF and DMARC records in Cloudflare). Mail sent to `hello@wayrise.app` is forwarded to a team member's Gmail by Cloudflare Email Routing. Both directions were tested on 21 Nov.
+- **How it works:** `POST /api/email-code/start {email}` emails the code and sets an HttpOnly cookie `cc_ec` holding a random key for this browser. `POST /api/email-code/verify {code}` checks the code against that browser's record and issues the app's session like the other sign-ins. Users are stored with `sub = 'email|<address>'` and are not merged with Logto or LinkedIn accounts that share the address.
+- **Limits:** 5 wrong codes per code. Codes to one address: one a minute, five an hour. One client (IP address): ten an hour. All addresses together: 90 a day, under Resend's free 100 a day. `/start` never looks up accounts, so its answer is the same for known and unknown addresses.
+- **Where that state lives:** in the server process's memory (`lib/email-code.mjs`). That is exact for `npm start`, but it is not shared between processes and is lost on restart. So only `server.mjs` turns this on. Do not enable it on Vercel or any other multi-instance host without moving the state to a shared store.
+- Behind the `cloudflared` tunnel every request reaches the server from this machine, so the client's address comes from the tunnel's `CF-Connecting-IP` header. That header is trusted only on requests from this machine.
+- Tests use a fake mailer (`test/email-code.test.mjs`); nothing is sent.
+
 ### Sign-in (Logto)
 
 Sign-in uses the team's existing self-hosted Logto at `auth.dustpowered.studio`, the same one the Cila client uses. Logto emails the one-time code from the existing `dustpowered.studio` sender, so there is no email setup in this app.
@@ -227,6 +238,7 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 |---|---|
 | `server.mjs` | Local server: static files plus the API |
 | `lib/api.mjs` | All API routes as one `(Request) => Response` function |
+| `lib/email-code.mjs`, `lib/mailer.mjs`, `public/email-code.js` | Sign-in with an emailed code: codes and limits, sending through Resend, the email and code form |
 | `lib/logto.mjs`, `public/auth.js` | Email sign-in: server-side ID token check, browser-side OpenID Connect flow |
 | `dev/mock-oidc.mjs` | Local stand-in for Logto, for tests and offline tries |
 | `lib/linkedin.mjs` | Sign in with LinkedIn, server side: the redirect to LinkedIn, the code exchange with the client secret, the userinfo call, and what is kept from the answer |

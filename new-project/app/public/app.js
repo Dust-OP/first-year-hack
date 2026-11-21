@@ -1,6 +1,7 @@
 // Career Compass, demo v1: wires sign-up, location, heading, the dial and the inbox together.
 
 import { createLogto, linkedin } from './auth.js';
+import { setupEmailCode } from './email-code.js';
 import { createCompass } from './compass.js';
 import { playConfirm } from './confirm.js';
 import { createHeading } from './heading.js';
@@ -698,7 +699,9 @@ $('quick').addEventListener('click', () => show('signup'));
   state.logto = health.auth ? createLogto(health.auth) : null;
   $('seed').hidden = !state.demo;
   $('quick').hidden = !health.quickSignup;
-  $('signin').hidden = $('signin-fine').hidden = !state.logto;
+  // With our own emailed codes on, they replace the Logto button.
+  $('signin').hidden = $('signin-fine').hidden = !state.logto || Boolean(health.emailCode);
+  $('email-code').hidden = !health.emailCode;
   $('signin-linkedin').hidden = $('signin-linkedin-fine').hidden = !health.linkedin;
   if (health.linkedin && state.logto) $('signin').className = 'ghost'; // one main button: LinkedIn
   if (health.linkedin?.standIn) $('signin-linkedin').textContent = 'Sign in with LinkedIn (local stand-in)';
@@ -715,6 +718,7 @@ $('quick').addEventListener('click', () => show('signup'));
     $('welcome-error').hidden = false;
     show('welcome');
   };
+  if (health.emailCode) setupEmailCode({ api, signedIn, showError: (msg) => { $('welcome-error').textContent = msg; $('welcome-error').hidden = !msg; } });
   // Coming back from LinkedIn: our server did the exchange and left a one-time handoff code for this page.
   const fromLinkedin = linkedin.takeReturn();
   if (fromLinkedin) {
@@ -742,5 +746,5 @@ $('quick').addEventListener('click', () => show('signup'));
       state.token = null;
     }
   }
-  show(state.logto || health.linkedin ? 'welcome' : 'signup');
+  show(state.logto || health.linkedin || health.emailCode ? 'welcome' : 'signup');
 })();
