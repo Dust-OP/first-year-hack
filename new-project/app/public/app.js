@@ -108,6 +108,20 @@ $('photo').addEventListener('change', async (e) => {
   }
 });
 
+// LinkedIn never tells apps your profile address, so you copy its share link yourself.
+// "Open my LinkedIn" (index.html) goes to linkedin.com/in/me, your own profile when you are signed in there.
+if (navigator.clipboard?.readText) {
+  $('linkedin-paste').hidden = false;
+  $('linkedin-paste').addEventListener('click', async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) $('linkedin-input').value = text;
+    } catch {
+      $('linkedin-input').focus(); // permission refused: the keyboard's own paste still works
+    }
+  });
+}
+
 $('signup').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
@@ -663,8 +677,12 @@ function enter() {
   if (!state.me.needsProfile) return show('compass');
   const viaLinkedin = state.me.signedInWith === 'linkedin';
   $('signup-lede').textContent = viaLinkedin
-    ? 'You are signed in with LinkedIn. LinkedIn does not tell apps your profile address, so please add it here, and say what you offer and what you are looking for.'
+    ? 'You are signed in with LinkedIn, so we have your name and photo. One more step: LinkedIn does not tell apps your profile link, so please paste its share link here.'
     : 'You are signed in. Tell people who you are, so the compass has something to show them.';
+  // A LinkedIn sign-in already gave us the name and photo: ask only for the share link
+  // (and the name too, in the rare case LinkedIn sent none).
+  $('signup').classList.toggle('linkedin-only', viaLinkedin);
+  $('name-field').classList.toggle('keep', viaLinkedin && !state.me.name);
   $('signup-submit').textContent = 'Save my profile';
   $('signup').elements.name.value = state.me.name ?? '';
   // The picture people will see: the LinkedIn photo, or initials until a photo is picked.

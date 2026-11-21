@@ -25,11 +25,19 @@ const json = (body, status = 200) =>
 const fail = (status, error) => json({ error }, status);
 const clean = (s, max) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
-/** Accepts a full URL, "linkedin.com/in/x" or a bare handle. Only ever returns a linkedin.com/in/ URL. */
+/**
+ * Accepts a LinkedIn profile share link (with its ?utm_… tail, even inside the text a share sheet copies),
+ * "linkedin.com/in/x" or a bare handle. Only ever returns a linkedin.com/in/ URL.
+ */
 export function normLinkedin(input) {
-  const raw = clean(input, 200);
-  const m = raw.match(/^(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/([^/?#\s]+)/i) ?? raw.match(/^@?([\p{L}\p{N}_%-]{3,100})$/u);
-  return m ? `https://www.linkedin.com/in/${encodeURIComponent(decodeURIComponent(m[1]))}` : null;
+  const raw = clean(input, 400);
+  const m = raw.match(/(?:^|[\s(<])(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/([^/?#\s<>)]+)/i) ?? raw.match(/^@?([\p{L}\p{N}_%-]{3,100})$/u);
+  if (!m) return null;
+  try {
+    return `https://www.linkedin.com/in/${encodeURIComponent(decodeURIComponent(m[1]))}`;
+  } catch {
+    return null; // a broken %-escape
+  }
 }
 
 /** What other people may see. `picture` is always a URL an <img> can load from our own origin. */
@@ -50,7 +58,7 @@ function readProfile(b) {
   const name = clean(b.name, 60);
   const linkedin = normLinkedin(b.linkedin);
   if (name.length < 2) return { error: 'Please enter your name.' };
-  if (!linkedin) return { error: 'Please enter your LinkedIn profile, e.g. linkedin.com/in/your-name.' };
+  if (!linkedin) return { error: 'Please paste your LinkedIn profile link. It looks like linkedin.com/in/your-name.' };
   const { photo, error } = readPhoto(b.photo);
   if (error) return { error };
   return { photo, fields: { name, headline: clean(b.headline, 100), linkedin, offers: normTags(b.offers), seeks: normTags(b.seeks) } };
