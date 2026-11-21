@@ -9,7 +9,7 @@ The [reference-loop](reference-loop/) directory contains the skill, helper scrip
 Deploy to Vercel only when explicitly requested or when needed to show a live result. Pushing to GitHub does not currently trigger a Vercel deployment.
 
 ## KCL First Year Hackason
-##🌟 Project Overview
+## 🌟 Project Overview
 For centuries, the compass has guided explorers through unfamiliar oceans and unknown territories. It helped people discover new places, overcome uncertainty, and find their way forward.
 
 But in today’s interconnected world, we face a different challenge.
