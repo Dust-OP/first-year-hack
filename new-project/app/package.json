@@ -1,0 +1,14 @@
+{
+  "name": "career-compass",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo v1: a compass that points at people worth working with, then hands off to LinkedIn.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "test": "node --test",
+    "snowflake:check": "node snowflake/check.mjs"
+  }
+}

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14202b">
+  <title>Career Compass</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Career Compass</h1>
+    <nav>
+      <button id="tab-compass" class="tab is-on" type="button">Compass</button>
+      <button id="tab-people" class="tab" type="button">People <span id="badge" class="badge" hidden>0</span></button>
+    </nav>
+  </header>
+
+  <!-- 1. Sign up -->
+  <main id="view-signup" hidden>
+    <p class="lede">The compass used to point north. This one points at the person nearby you should be working with.</p>
+    <form id="signup" novalidate>
+      <label>Your name <input name="name" autocomplete="name" required maxlength="60"></label>
+      <label>What you do <input name="headline" placeholder="CS first year, King's College London" maxlength="100"></label>
+      <label>Your LinkedIn profile <input name="linkedin" placeholder="linkedin.com/in/your-name" inputmode="url" autocapitalize="none" required></label>
+      <fieldset><legend>I can offer</legend><div class="chips" data-field="offers"></div></fieldset>
+      <fieldset><legend>I am looking for</legend><div class="chips" data-field="seeks"></div></fieldset>
+      <p id="signup-error" class="error" role="alert" hidden></p>
+      <button class="primary" type="submit">Create my profile</button>
+      <p class="fine">People within 500 m who also use this app can see your name, what you do and your LinkedIn link while you have the compass open. They see a direction and a distance, never your position on a map.</p>
+    </form>
+  </main>
+
+  <!-- 2. Compass -->
+  <main id="view-compass" hidden>
+    <div class="dial-wrap">
+      <svg id="dial" role="img" aria-label="Compass showing people nearby"></svg>
+      <button id="start" class="primary start" type="button">Start compass</button>
+    </div>
+    <p id="status" class="status" aria-live="polite">Tap “Start compass” and allow location and motion access.</p>
+
+    <section id="card" class="card" hidden aria-live="polite"></section>
+
+    <details class="tools">
+      <summary>Demo tools and what runs underneath</summary>
+      <div class="tool-row">
+        <button id="seed" type="button">Add demo people</button>
+        <button id="manual" type="button">Turn by hand</button>
+        <button id="hide" type="button">Go invisible</button>
+        <button id="signout" type="button">Sign out</button>
+      </div>
+      <pre id="engine" class="engine"></pre>
+    </details>
+  </main>
+
+  <!-- 3. People: invitations and connections -->
+  <main id="view-people" hidden>
+    <section><h2>Invitations for you</h2><div id="incoming" class="list"></div></section>
+    <section><h2>Connections</h2><div id="connections" class="list"></div></section>
+    <section><h2>Sent</h2><div id="outgoing" class="list"></div></section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

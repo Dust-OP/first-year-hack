@@ -22,8 +22,9 @@ This file records the brief as the team received it and the decisions made so fa
 | Enter **Track 2: Retro Remix** | Decided by the team |
 | The **compass** is the core element to reinvent | Decided after team brainstorming. The exact concept is still open; see [`findings/retro-compass-prior-art/SUMMARY.md`](findings/retro-compass-prior-art/SUMMARY.md) for what has already been built |
 | Demo video is a **cinematic launch film**, not a person presenting to camera. It opens with a "1979 vs 2026" comparison, in the style of OpenAI's "Introducing GPT-6 Astra" | Decided as the style. Shot list and length are still open; see [`findings/retro-compass-prior-art/demo-video.md`](findings/retro-compass-prior-art/demo-video.md) |
+| **Concept:** the compass points at nearby people worth working with ("find the right person to work with in your career"). Point at someone to see their profile, invite them in the app, and after they accept both open each other's LinkedIn | Decided 21 Nov. Demo v1 is in [`app/`](app/); see [`app/README.md`](app/README.md) for what works and what is untested |
 | Try for the Snowflake bonus prize | Being researched; see [`findings/snowflake-real-projects/`](findings/snowflake-real-projects/) when it is published |
-| Front end: phone web app, SVG dial, DeviceOrientation heading, no-sensor demo mode | Leading direction, **not adopted**; see [`findings/compass-frontend-design/RESULT.md`](findings/compass-frontend-design/RESULT.md) |
+| Front end: phone web app, SVG dial, DeviceOrientation heading, no-sensor demo mode | **Adopted** in demo v1 (basic dial; the designed dial is still to come); see [`findings/compass-frontend-design/RESULT.md`](findings/compass-frontend-design/RESULT.md) |
 
 ## Unconfirmed rules
 

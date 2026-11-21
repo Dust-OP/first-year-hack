@@ -7,7 +7,8 @@ This file describes this project only. It does not replace any agent's own globa
 
 - **Event:** KCL First Year Hackathon 2026, **Track 2: Retro Remix**. The theme is reinventing the compass.
 - **Team:** see the repository root [`README.md`](../README.md).
-- **Stage:** research. No concept, name, stack or app code has been chosen yet.
+- **Concept (decided 21 Nov):** a compass that points at nearby people worth working with. Point at someone to see their profile, send an in-app invitation, and after they accept both sides open the other's LinkedIn profile.
+- **Stage:** demo v1 built in [`app/`](app/) (working title "Career Compass"). The final name is not chosen. Not yet run on a real phone or against Snowflake; see [`app/README.md`](app/README.md).
 - **Leading technical direction from research, not yet adopted:**
   - A phone web app.
   - An SVG compass dial rotated with CSS transforms.
@@ -28,6 +29,7 @@ first-year-hack/                  repository root
 └── new-project/                  ← this project
     ├── AGENTS.md                 this file: architecture, folder roles, working rules
     ├── README.md                 human-facing overview and key research points
+    ├── app/                      the web app (demo v1): Node server, API, phone UI, Snowflake setup
     ├── EVENT-BRIEF.md            event tracks as given, team decisions, unconfirmed rules
     ├── RESOURCES.md              index of every linked resource: in repo, external, in progress, kept local
     └── findings/                 all research findings and evidence
@@ -56,9 +58,10 @@ first-year-hack/                  repository root
 | `findings/<topic>/RESULT.md` or `SUMMARY.md` | The decision-ready summary: recommendation, limits, adoption state, next check. | The research owner for that topic |
 | `findings/<topic>/*.md` | Detailed worker reports: per-candidate data, quotes, status labels. | Research workers |
 | `findings/<topic>/evidence/` | Source notes (`E-*.json`) from `reference-loop/loop.mjs note`. | Research sessions |
+| `new-project/app/` | The product: a zero-dependency Node server (`server.mjs`, `lib/`), the phone UI (`public/`), tests (`test/`) and Snowflake setup (`snowflake/`). `public/compass.js` is the dial and belongs to the front-end design work. Start with `app/README.md`. | App sessions |
 | `../reference-loop/` | The research method and its helpers. Do not put project findings here. | Skill maintainers |
 
-**Planned, not created yet:** app source, for example `new-project/app/` or `new-project/src/`, once the team picks a stack. Add its row here when it is created.
+**App checks:** run `npm test` in `new-project/app/` after changing anything under `lib/`. Never commit `app/.env` or key files.
 
 ## Working rules
 
@@ -77,4 +80,5 @@ first-year-hack/                  repository root
 
 - **Reddit opinion on compass UI designs** has not been read; automated access was blocked. A teammate should check it in a normal browser and add it to `findings/compass-frontend-design/`.
 - **Event rules on track and prize stacking** are unconfirmed. Ask the organisers; the question text is in `findings/retro-compass-prior-art/rules-snowflake.md`.
-- **No candidate has been tested on a phone yet.** First check: an SVG dial with the Cosmodial-style heading code, tested on one iPhone and one Android phone over HTTPS.
+- **The app has not been run on a phone yet.** First check: open `app/` over HTTPS on one iPhone and one Android phone, outdoors, and record what the heading does.
+- **The Snowflake path has not been run.** Needs an account; then `npm run snowflake:check` in `app/`.

@@ -1,0 +1,97 @@
+:root {
+  --ink: #14202b; --ink-2: #1e2f3e; --paper: #f6ecd2; --brass: #c9a24b; --brass-dark: #7a561c;
+  --red: #b3261e; --green: #2f6b45; --muted: #9fb0bd; --line: #33485a;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--paper); background: var(--ink);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; background: radial-gradient(120% 80% at 50% 0%, #24394b 0%, var(--ink) 60%); }
+[hidden] { display: none !important; }
+h1, h2, .cc-cardinal { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 16px 10px; }
+.bar h1 { margin: 0; font-size: 1.15rem; letter-spacing: .04em; color: var(--brass); }
+.bar nav { display: flex; gap: 6px; }
+.tab { border: 1px solid var(--line); background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 999px; font: inherit; font-size: .9rem; }
+.tab.is-on { background: var(--ink-2); color: var(--paper); border-color: var(--brass); }
+.badge { display: inline-block; min-width: 1.3em; padding: 0 5px; border-radius: 999px; background: var(--red); color: #fff; font-size: .75rem; font-weight: 700; text-align: center; }
+
+main { max-width: 460px; margin: 0 auto; padding: 4px 16px calc(28px + env(safe-area-inset-bottom)); }
+.lede { color: var(--paper); font-size: 1.05rem; line-height: 1.45; margin: 8px 0 18px; }
+.fine { color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.error { color: #ffb4ab; margin: 0; }
+
+form { display: grid; gap: 14px; }
+label { display: grid; gap: 6px; font-size: .9rem; color: var(--muted); }
+input { font: inherit; font-size: 1rem; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink-2); color: var(--paper); }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+fieldset { border: 0; padding: 0; margin: 0; }
+legend { font-size: .9rem; color: var(--muted); margin-bottom: 8px; padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips label { display: inline-flex; }
+.chips input { position: absolute; opacity: 0; pointer-events: none; }
+.chips span, .tag { display: inline-block; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--paper); font-size: .88rem; }
+.chips input:checked + span { background: var(--brass); border-color: var(--brass); color: #1b1404; font-weight: 600; }
+.chips input:focus-visible + span { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+button { font: inherit; cursor: pointer; }
+button.primary, .btn { display: inline-block; text-align: center; text-decoration: none; padding: 13px 18px; border-radius: 12px; border: 0; background: var(--brass); color: #1b1404; font-weight: 700; font-size: 1rem; }
+button.ghost { padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--paper); font-size: 1rem; }
+button:disabled { opacity: .55; cursor: default; }
+
+.dial-wrap { position: relative; width: min(100%, 400px); margin: 4px auto 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+#dial { display: block; width: 100%; height: auto; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); }
+.start { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 6px 20px rgba(0,0,0,.45); }
+.status { text-align: center; color: var(--muted); font-size: .88rem; min-height: 2.6em; margin: 10px 0; }
+
+.cc-ring { fill: none; stroke: #8a6a2c; stroke-opacity: .35; stroke-dasharray: 2 5; }
+.cc-tick { stroke: #5a3d12; stroke-width: 1; }
+.cc-tick-major { stroke-width: 2.2; }
+.cc-cardinal { font-size: 19px; font-weight: 700; fill: #3c2a0c; text-anchor: middle; dominant-baseline: central; }
+.cc-north { fill: var(--red); }
+.cc-spread { fill: var(--red); fill-opacity: .12; }
+.cc-needle-head { fill: var(--red); stroke: #5d0f0a; stroke-width: .8; }
+.cc-needle-tail { fill: #2b3a47; }
+.cc-needle.is-north .cc-needle-head { fill: #2b3a47; stroke: none; opacity: .55; }
+.cc-pin { fill: var(--brass); stroke: #3c2a0c; }
+.cc-lubber { fill: var(--paper); stroke: #3c2a0c; }
+.cc-person { cursor: pointer; }
+.cc-dot { fill: #2b3a47; stroke: var(--paper); stroke-width: 1.5; }
+.cc-person[data-match] .cc-dot { fill: var(--brass-dark); }
+.cc-person[data-relation="connected"] .cc-dot { fill: var(--green); }
+.cc-person.is-target .cc-dot { stroke: var(--red); stroke-width: 3; }
+.cc-person.is-aimed .cc-dot { fill: var(--red); }
+.cc-initials { font-size: 10px; font-weight: 700; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+
+.card, .row { background: var(--paper); color: #1d1608; border-radius: 16px; padding: 16px; box-shadow: 0 8px 22px rgba(0,0,0,.4); }
+.card { animation: rise .25s ease-out; }
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.card h2, .row h3 { margin: 0; font-size: 1.2rem; font-family: "Iowan Old Style", Palatino, Georgia, serif; }
+.card .where, .row .where { color: #6b5a33; font-size: .85rem; white-space: nowrap; }
+.card p, .row p { margin: 6px 0 0; line-height: 1.4; }
+.why { color: var(--green); font-weight: 600; font-size: .92rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag { border-color: #cdb984; color: #4a3a12; font-size: .8rem; padding: 4px 10px; }
+.tag.hit { background: #2f6b45; border-color: #2f6b45; color: #fff; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.actions .btn, .actions button { flex: 1 1 auto; }
+.card .btn, .row .btn, .card button.primary, .row button.primary { background: #1e2f3e; color: var(--paper); }
+.card button.ghost, .row button.ghost { color: #1d1608; border-color: #b8a36a; }
+.card a.link, .row a.link { color: #0a4f8a; font-weight: 600; }
+.note { color: #6b5a33; font-size: .82rem; }
+
+.list { display: grid; gap: 12px; }
+#view-people h2 { font-size: 1rem; color: var(--brass); margin: 22px 0 10px; letter-spacing: .03em; }
+.empty { color: var(--muted); font-size: .9rem; margin: 0; }
+
+.tools { margin-top: 18px; color: var(--muted); font-size: .88rem; }
+.tools summary { cursor: pointer; padding: 8px 0; }
+.tool-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.tool-row button { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink-2); color: var(--paper); font-size: .88rem; }
+.engine { margin: 0; padding: 12px; border-radius: 10px; background: #0d161e; color: #b9d6c2; font-size: .72rem; line-height: 1.45; overflow-x: auto; white-space: pre-wrap; }
+/* The needle lies over the person it points at: let taps fall through to them. */
+.cc-needle, .cc-pin, .cc-lubber, .cc-spread { pointer-events: none; }
+.cc-person { outline: none; }
+.cc-person:focus-visible .cc-dot { stroke: var(--brass); stroke-width: 3.5; }
