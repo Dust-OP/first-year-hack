@@ -19,7 +19,7 @@ Built 21 Nov 2026. No dependencies: Node 20+ only.
 cd new-project/app
 npm start          # http://localhost:3000
 npm run phones     # the same server behind an https address, with a QR code, for real phones
-npm test           # 14 tests: bearings, invite/accept/decline, demo bots, email sign-in, LinkedIn sign-in,
+npm test           # 15 tests: bearings, invite/accept/decline, demo bots, email sign-in, LinkedIn sign-in,
                    #           pictures, the privacy boundary, Snowflake store without the new tables, QR code
 ```
 

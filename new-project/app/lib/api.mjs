@@ -75,6 +75,13 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
   // One-time codes that hand a finished LinkedIn sign-in over to the page. Kept in memory: one server process.
   const handoffs = new Map(); // code -> { userId, expiresMs }
   const originOf = (request) => (publicUrl || new URL(request.url).origin).replace(/\/+$/, '');
+  /**
+   * Photos and LinkedIn records ride along with a sign-up or sign-in. If the store cannot save one
+   * (for example on a database that is not ready for them), the person still gets in; it is logged.
+   */
+  const extra = async (what, run) => {
+    try { await run(); } catch (err) { console.error(`[api] ${what} was NOT saved:`, err.message); }
+  };
 
   async function auth(request) {
     const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
@@ -147,7 +154,7 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       if (p.error) return fail(400, p.error);
       const token = newToken();
       const user = await store.createUser({ id: randomUUID(), sub: null, email: null, tokenHash: sha(token), ...p.fields, demo: false });
-      if (p.photo) await store.setPhoto(user.id, p.photo);
+      if (p.photo) await extra('the picked photo', () => store.setPhoto(user.id, p.photo));
       return json({ token, me: self(user) });
     },
 
@@ -210,7 +217,7 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
         });
       }
       // Recorded now, while the person is signing in. It is never refreshed on a schedule.
-      await store.saveLinkedinProfile(user.id, { ...member, profileUrl: user.linkedin ?? null }, now());
+      await extra('the LinkedIn record', () => store.saveLinkedinProfile(user.id, { ...member, profileUrl: user.linkedin ?? null }, now()));
 
       for (const [code, h] of handoffs) if (h.expiresMs < now()) handoffs.delete(code);
       const code = newToken();
@@ -275,8 +282,8 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       const p = readProfile(await readBody(request, PROFILE_BODY_MAX));
       if (p.error) return fail(400, p.error);
       const saved = await store.updateUser(me.id, p.fields);
-      if (p.photo !== undefined) await store.setPhoto(me.id, p.photo);
-      if (signedInWith(me) === 'linkedin') await store.setLinkedinProfileUrl(me.id, p.fields.linkedin);
+      if (p.photo !== undefined) await extra('the picked photo', () => store.setPhoto(me.id, p.photo));
+      if (signedInWith(me) === 'linkedin') await extra('the profile address in the LinkedIn record', () => store.setLinkedinProfileUrl(me.id, p.fields.linkedin));
       return json({ me: self(saved, p.photo !== undefined ? now() : undefined) });
     },
 
@@ -285,7 +292,12 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     'GET /api/avatar': async (request) => {
       const id = new URL(request.url).searchParams.get('id') ?? '';
       // On a Snowflake account without the photo and LinkedIn tables the store answers with the name only.
-      const a = await store.getAvatar(id);
+      // Should that lookup fail for any other reason, initials are still better than a broken image.
+      const a = await store.getAvatar(id).catch(async (err) => {
+        console.error('[api] picture lookup failed, serving initials:', err.message);
+        const [u] = await store.getUsers([id]);
+        return u ? { name: u.name, photo: null, picture: null } : null;
+      });
       if (!a) return fail(404, 'Not found.');
       const headers = { 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" };
       if (a.photo) return new Response(photoBytes(a.photo), { headers: { ...headers, 'Content-Type': 'image/jpeg' } });

@@ -12,7 +12,7 @@ import { createMockLinkedin } from '../dev/mock-linkedin.mjs';
  * three existing tables and refuses the rest the way Snowflake does. It checks the store's own
  * logic, not Snowflake's SQL: that still needs `npm run snowflake:check` on the real account.
  */
-function accountWithoutNewTables() {
+function accountWithoutNewTables(refusal = (name) => `Snowflake 422: SQL compilation error:\nObject '${name}' does not exist or not authorized. (sqlState 42S02)`) {
   const users = [], locations = new Map(), requests = [];
   const sent = [];
   const row = (u) => ({ ...u, IS_DEMO: String(u.IS_DEMO) });
@@ -20,8 +20,7 @@ function accountWithoutNewTables() {
     const s = sql.replace(/\s+/g, ' ').trim();
     sent.push(s);
     if (/LINKEDIN_PROFILES|USER_PHOTOS/.test(s)) {
-      const name = s.match(/LINKEDIN_PROFILES|USER_PHOTOS/)[0];
-      throw new Error(`Snowflake 422: SQL compilation error:\nObject '${name}' does not exist or not authorized. (sqlState 42S02)`);
+      throw new Error(refusal(s.match(/LINKEDIN_PROFILES|USER_PHOTOS/)[0]));
     }
     if (s.startsWith('INSERT INTO USERS')) {
       const [ID, LOGTO_SUB, EMAIL, TOKEN_HASH, NAME, HEADLINE, LINKEDIN_URL, OFFERS, SEEKS, IS_DEMO, CREATED_MS] = p;
@@ -110,4 +109,21 @@ test('Snowflake store on an account without the LinkedIn and photo tables: the a
   assert.match(warnings[0], /LINKEDIN_PROFILES \/ USER_PHOTOS are not in this account yet.*setup\.sql/);
   assert.equal(account.sent.filter((s) => /LINKEDIN_PROFILES|USER_PHOTOS/.test(s)).length, 1, 'only the first statement ever reached for the missing tables');
   assert.equal(account.users.find((u) => u.NAME === 'Ben Okoye').EMAIL, null, 'the LinkedIn email is not put into USERS instead');
+});
+
+test('Snowflake store: an unexpected failure on the new tables still lets people sign up and still shows a picture', async (t) => {
+  const errors = [];
+  t.mock.method(console, 'error', (...args) => errors.push(args.join(' ')));
+  // The same account, but refusing in words the store does not recognise as "no such table".
+  const account = accountWithoutNewTables(() => 'Snowflake 503: service unavailable (sqlState ?)');
+  const api = createApi({ store: createSnowflakeStore(account), demo: true });
+  const jpeg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16]).toString('base64');
+  const signup = await api(new Request('http://x/api/signup', { method: 'POST', body: JSON.stringify({ name: 'Cy Young', linkedin: 'cy-young', photo: jpeg }) }));
+  assert.equal(signup.status, 200, 'the account is made even though the photo could not be saved');
+  const { me } = await signup.json();
+  const picture = await api(new Request(`http://x${me.picture}`));
+  assert.equal(picture.status, 200);
+  assert.match(await picture.text(), />CY<\/text>/);
+  assert.equal(errors.length, 2, 'each failure is logged');
+  assert.match(errors.join('\n'), /picked photo was NOT saved[\s\S]*picture lookup failed, serving initials/);
 });
