@@ -8,7 +8,7 @@
 //   showing your profile and direction to people nearby. The notice offers to change your mind.
 // - Bump REVISION whenever privacy.html changes in substance, and everyone is asked again.
 (() => {
-  const REVISION = 3; // 2: pictures are shown to people nearby; sign-in with LinkedIn (21 Nov 2026). 3: the live site stores data in Neon Postgres (21 Nov 2026)
+  const REVISION = 4; // 2: pictures are shown to people nearby; sign-in with LinkedIn (21 Nov 2026). 3: the live site stores data in Neon Postgres (21 Nov 2026). 4: sign-in with a code emailed through Resend, its records in the database on the live site (21 Nov 2026)
   // On the privacy notice itself, don't block the page: people must be able to read it first.
   const onPrivacyPage = /privacy\.html$/.test(location.pathname);
   const CC = window.CookieConsent;

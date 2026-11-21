@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { createApi } from './lib/api.mjs';
 import { createLinkedin, linkedinConfigFromEnv } from './lib/linkedin.mjs';
 import { createIdTokenVerifier, logtoConfigFromEnv } from './lib/logto.mjs';
-import { createStoreFromEnv } from './lib/setup.mjs';
+import { mailerConfigFromEnv } from './lib/mailer.mjs';
+import { createStoreFromEnv, emailCodeFromEnv, postgresQueryFromEnv } from './lib/setup.mjs';
 
 try { process.loadEnvFile(new URL('./.env', import.meta.url)); } catch { /* no .env: defaults apply */ }
 
@@ -19,13 +20,29 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 
-const store = await createStoreFromEnv(); // DATABASE_URL -> Postgres, else Snowflake, else memory
+const pg = await postgresQueryFromEnv();
+const store = await createStoreFromEnv(process.env, pg); // DATABASE_URL -> Postgres, else Snowflake, else memory
 const logto = logtoConfigFromEnv();
 const linkedinCfg = linkedinConfigFromEnv();
+// Email-code sign-in (RESEND_API_KEY): codes in Postgres when DATABASE_URL is set, else in this process's memory.
+const mailer = mailerConfigFromEnv();
+const emailCode = emailCodeFromEnv(process.env, { pg });
 const api = createApi({
   store, demo: process.env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto),
-  linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: process.env.PUBLIC_URL || null,
+  linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: process.env.PUBLIC_URL || null, emailCode,
 });
+
+/**
+ * Who is asking, for the email-code send limits. Behind a local HTTPS tunnel every request comes from
+ * this machine, so the tunnel's header names the real client. It is only trusted on those local requests:
+ * from anywhere else it could be made up.
+ */
+function clientOf(req) {
+  const peer = req.socket.remoteAddress ?? 'unknown';
+  if (!/^(::1|127\.|::ffff:127\.)/.test(peer)) return peer;
+  const fwd = req.headers['cf-connecting-ip'] ?? String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
+  return fwd || peer;
+}
 
 async function serveStatic(pathname, res) {
   // /callback is where Logto sends the browser back after sign-in; the page itself finishes the job.
@@ -78,7 +95,7 @@ async function handle(req, res) {
       chunks.push(c);
     }
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-    const response = await api(new Request(url, { method: req.method, headers: req.headers, body: hasBody ? Buffer.concat(chunks) : undefined }));
+    const response = await api(new Request(url, { method: req.method, headers: req.headers, body: hasBody ? Buffer.concat(chunks) : undefined }), { client: clientOf(req) });
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(Buffer.from(await response.arrayBuffer()));
     return;
@@ -91,6 +108,7 @@ const port = Number(process.env.PORT) || 3000;
 const signIn = [
   linkedinCfg && (linkedinCfg.mock ? `LinkedIn STAND-IN at ${linkedinCfg.mock}` : 'LinkedIn'),
   logto && `Logto at ${logto.endpoint}`,
+  emailCode && `email code from ${mailer.from}`,
 ].filter(Boolean).join(' + ') || 'quick sign-up only';
 server.listen(port, () => {
   console.log(`Career Compass on http://localhost:${port}  (store: ${store.kind}, sign-in: ${signIn})`);

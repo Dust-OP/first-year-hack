@@ -32,6 +32,11 @@ test('LinkedIn input only ever becomes a linkedin.com/in/ URL', () => {
   assert.equal(normLinkedin('linkedin.com/in/ada-lovelace/'), 'https://www.linkedin.com/in/ada-lovelace');
   assert.equal(normLinkedin('https://uk.linkedin.com/in/ada?x=1'), 'https://www.linkedin.com/in/ada');
   assert.equal(normLinkedin('ada-lovelace'), 'https://www.linkedin.com/in/ada-lovelace');
+  // What the LinkedIn app's share option copies, alone and inside a share message.
+  assert.equal(normLinkedin('https://www.linkedin.com/in/ada-lovelace-1a2b3c?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app'), 'https://www.linkedin.com/in/ada-lovelace-1a2b3c');
+  assert.equal(normLinkedin("Check out Ada Lovelace's profile on LinkedIn https://www.linkedin.com/in/ada-lovelace?utm_medium=android_app"), 'https://www.linkedin.com/in/ada-lovelace');
+  assert.equal(normLinkedin('https://www.linkedin.com/in/ada%E0'), null);
+  assert.equal(normLinkedin('https://evil.example/?next=linkedin.com/in/ada'), null);
   assert.equal(normLinkedin('javascript:alert(1)'), null);
   assert.equal(normLinkedin('https://evil.example/in/ada'), null);
 });
