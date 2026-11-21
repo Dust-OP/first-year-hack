@@ -20,9 +20,11 @@ function setup({ secret = 'mock-secret', localeAs = 'text', demo = false } = {})
   };
   const store = createMemoryStore();
   const api = createApi({ store, demo, now: () => clock.t, linkedin: createLinkedin(cfg, { fetch: mock.fetch }) });
-  const call = (token) => async (method, path, body) => {
+  /** `cookie` is the browser's cookie jar: what `signIn()` below returns for the browser that did the sign-in. */
+  const call = (token, cookie) => async (method, path, body) => {
     const res = await api(new Request(APP + path, {
-      method, body: body ? JSON.stringify(body) : undefined, headers: token ? { authorization: `Bearer ${token}` } : {},
+      method, body: body ? JSON.stringify(body) : undefined,
+      headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(cookie ? { cookie } : {}) },
     }));
     return { status: res.status, body: await res.json() };
   };
@@ -40,11 +42,12 @@ function setup({ secret = 'mock-secret', localeAs = 'text', demo = false } = {})
     const landed = await api(new Request(callback, { headers: { cookie } }));
     assert.equal(landed.status, 302);
     const hash = new URLSearchParams(new URL(landed.headers.get('location')).hash.slice(1));
-    return { start, consent, callback, cookie, code: hash.get('linkedin'), error: hash.get('linkedin_error') };
+    return { start, consent, callback, landed, cookie, code: hash.get('linkedin'), error: hash.get('linkedin_error') };
   }
+  /** The whole sign-in in one browser: the page collects its session with the cookie that browser still holds. */
   async function session(opts) {
-    const { code } = await signIn(opts);
-    return (await call()('POST', '/api/linkedin/session', { code })).body;
+    const { code, cookie } = await signIn(opts);
+    return (await call(null, cookie)('POST', '/api/linkedin/session', { code })).body;
   }
   return { clock, mock, store, api, call, signIn, session };
 }
@@ -56,7 +59,7 @@ test('LinkedIn sign-in: the member is recorded, adds a profile link, and a later
   assert.equal((await anon('POST', '/api/signup', { name: 'Eve', linkedin: 'eve' })).status, 403, 'no unverified sign-ups once LinkedIn sign-in is on');
 
   // The request we send LinkedIn is the documented one, and carries no secret.
-  const { start, consent, code } = await signIn();
+  const { start, consent, code, cookie } = await signIn();
   assert.equal(consent.pathname, '/oauth/v2/authorization');
   assert.equal(consent.searchParams.get('response_type'), 'code');
   assert.equal(consent.searchParams.get('scope'), 'openid profile email');
@@ -64,12 +67,12 @@ test('LinkedIn sign-in: the member is recorded, adds a profile link, and a later
   assert.match(start.headers.get('set-cookie'), /HttpOnly; SameSite=Lax; Secure$/);
   assert.doesNotMatch(start.headers.get('location') + start.headers.get('set-cookie'), /mock-secret/);
 
-  const first = (await anon('POST', '/api/linkedin/session', { code })).body;
+  const first = (await call(null, cookie)('POST', '/api/linkedin/session', { code })).body;
   assert.equal(first.me.name, 'Ada Lovelace', 'the name comes from LinkedIn');
   assert.equal(first.me.signedInWith, 'linkedin');
   assert.equal(first.me.needsProfile, true, 'LinkedIn does not give the profile address, so the person still adds it');
   assert.equal(first.me.email, null);
-  assert.equal((await anon('POST', '/api/linkedin/session', { code })).status, 401, 'a handoff code works once');
+  assert.equal((await call(null, cookie)('POST', '/api/linkedin/session', { code })).status, 401, 'a handoff code works once');
   const ada = call(first.token);
   assert.equal((await ada('POST', '/api/sync', HERE)).body.located, false, 'off every compass until the profile is complete');
 
@@ -107,9 +110,17 @@ test('LinkedIn sign-in: the member is recorded, adds a profile link, and a later
   assert.equal((await ada2('POST', '/api/sync', HERE)).body.located, true);
 });
 
-test('LinkedIn sign-in is refused when it is cancelled, tampered with, replayed or the secret is wrong', async () => {
+test('LinkedIn sign-in is refused when it is cancelled, tampered with, replayed or the secret is wrong', async (t) => {
   const { api, signIn } = setup();
+  const logged = [];
+  t.mock.method(console, 'error', (...args) => logged.push(args.join(' ')));
   assert.match((await signIn({ decision: 'cancel' })).error, /cancelled/);
+  // Any other error on the return, whether LinkedIn reported it or someone wrote it into a link:
+  // the page is given our own sentence, and the text from the address only goes to the server log.
+  const planted = 'Your account is locked. Call 020 555 0100 to unlock it.';
+  const reported = await api(new Request(`${APP}/api/linkedin/callback?error=access_denied&error_description=${encodeURIComponent(planted)}`));
+  assert.equal(reported.headers.get('location'), `${APP}/#linkedin_error=${encodeURIComponent('LinkedIn did not complete the sign-in. Please try again.')}`);
+  assert.ok(logged.some((line) => line.includes('access_denied') && line.includes(planted)), 'what LinkedIn said is in the log');
   // A return that does not carry the state this browser was given (someone else's link).
   assert.match((await signIn({ tamper: (u) => u.replace(/state=[^&]+/, 'state=forged') })).error, /interrupted/);
   // A return with no cookie at all, e.g. the callback link opened in another browser.
@@ -223,4 +234,40 @@ test('everyone the API returns has a picture an <img> can load; email is never s
   // A name cannot smuggle markup into the generated image.
   const x = (await call()('POST', '/api/signup', { name: '<script>alert(1)</script> "x"', linkedin: 'xss' })).body;
   assert.doesNotMatch((await image(x.me.picture)).bytes.toString(), /<script|"x"/);
+});
+
+test('a handoff code is only good in the browser that went through LinkedIn', async () => {
+  const { api, call, signIn } = setup();
+  const redeem = (code, cookie) => call(null, cookie)('POST', '/api/linkedin/session', { code });
+  const asMallory = { name: 'Mallory Bait', email: 'mallory@example.com' };
+
+  // Mallory has an account and a session that works.
+  const own = await signIn(asMallory);
+  assert.equal(own.landed.headers.get('set-cookie'), null, 'the state cookie stays in the browser until the session is collected');
+  const mallory = (await redeem(own.code, own.cookie)).body;
+  assert.equal((await call(mallory.token)('GET', '/api/me')).status, 200);
+
+  // Someone else is half way through a sign-in of their own.
+  const victim = await signIn({ name: 'Victor Victim', email: 'victor@example.com' });
+
+  // Mallory signs in again, stops before her page collects the session, and sends the link
+  // (/#linkedin=<her code>) to someone else. The browser that opens it has no state cookie,
+  // or the cookie of its own sign-in, or whatever else: it is never signed in as Mallory.
+  let bait;
+  for (const jar of [undefined, victim.cookie, 'cc_li_state=', 'cc_li_state=undefined', `cc_li_state=${own.cookie.split('=')[1]}`, 'something=else']) {
+    bait = await signIn(asMallory);
+    const refused = await redeem(bait.code, jar);
+    assert.equal(refused.status, 401, `cookie: ${jar}`);
+    assert.deepEqual(Object.keys(refused.body), ['error'], 'no token, no profile');
+  }
+  // None of those collected a session: doing so would have ended Mallory's earlier one.
+  assert.equal((await call(mallory.token)('GET', '/api/me')).status, 200, 'a refused code does not touch the account');
+  // A refused code is spent all the same, even for the browser it was made for.
+  assert.equal((await redeem(bait.code, bait.cookie)).status, 401);
+
+  // The other person's own sign-in is untouched by all this and completes in their own browser, as themselves.
+  const done = await api(new Request(`${APP}/api/linkedin/session`, { method: 'POST', body: JSON.stringify({ code: victim.code }), headers: { cookie: victim.cookie } }));
+  assert.equal(done.status, 200);
+  assert.match(done.headers.get('set-cookie'), /^cc_li_state=; Path=\/api\/linkedin; Max-Age=0/, 'the state cookie is cleared once it has done its job');
+  assert.equal((await done.json()).me.name, 'Victor Victim');
 });

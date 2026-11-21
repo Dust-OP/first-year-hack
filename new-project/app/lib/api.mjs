@@ -16,6 +16,7 @@ const BOT_ACCEPT_MS = 4_000; // demo bots accept an invitation after this long
 const FOREVER = 32503680000000; // year 3000: demo bots never go stale
 const HANDOFF_MS = 60_000; // how long the page has to collect its session after coming back from LinkedIn
 const STATE_COOKIE = 'cc_li_state';
+const CLEAR_STATE = `${STATE_COOKIE}=; Path=/api/linkedin; Max-Age=0; HttpOnly; SameSite=Lax`;
 const PROFILE_BODY_MAX = 200_000; // the profile form may carry a small photo
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');
@@ -73,8 +74,10 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
   // The quick sign-up has no email check. Once real sign-in is on, keep it only for demos.
   const quickSignup = (!logto && !linkedin) || demo;
   // One-time codes that hand a finished LinkedIn sign-in over to the page. Kept in memory: one server process.
-  const handoffs = new Map(); // code -> { userId, expiresMs }
+  const handoffs = new Map(); // code -> { userId, expiresMs, state }
   const originOf = (request) => (publicUrl || new URL(request.url).origin).replace(/\/+$/, '');
+  /** The `state` this browser was given when it started a LinkedIn sign-in, read from its cookie. */
+  const stateOf = (request) => new RegExp(`(?:^|;\\s*)${STATE_COOKIE}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1];
   /**
    * Photos and LinkedIn records ride along with a sign-up or sign-in. If the store cannot save one
    * (for example on a database that is not ready for them), the person still gets in; it is logged.
@@ -182,18 +185,21 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       if (!linkedin) return fail(404, 'LinkedIn sign-in is not set up on this server.');
       const origin = originOf(request);
       const q = new URL(request.url).searchParams;
-      const back = (key, value) => new Response(null, {
+      const back = (key, value, keepState = false) => new Response(null, {
         status: 302,
         headers: {
           Location: `${origin}/#${key}=${encodeURIComponent(value)}`,
-          'Set-Cookie': `${STATE_COOKIE}=; Path=/api/linkedin; Max-Age=0; HttpOnly; SameSite=Lax`,
+          ...(keepState ? {} : { 'Set-Cookie': CLEAR_STATE }),
           'Cache-Control': 'no-store',
         },
       });
-      const expected = new RegExp(`(?:^|;\\s*)${STATE_COOKIE}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1];
+      const expected = stateOf(request);
       if (q.get('error')) {
+        // Anyone can write a link to this address with any `error_description`, and nothing has been
+        // checked yet. So that text goes to the log, and the page only ever shows our own sentences.
         const cancelled = /^user_cancelled/.test(q.get('error'));
-        return back('linkedin_error', cancelled ? 'You cancelled the LinkedIn sign-in.' : clean(q.get('error_description') || q.get('error'), 200));
+        if (!cancelled) console.error('[linkedin] callback error:', clean(q.get('error'), 60), clean(q.get('error_description'), 200));
+        return back('linkedin_error', cancelled ? 'You cancelled the LinkedIn sign-in.' : 'LinkedIn did not complete the sign-in. Please try again.');
       }
       // `state` proves this return belongs to the sign-in this browser started.
       if (!expected || !q.get('code') || q.get('state') !== expected) return back('linkedin_error', 'Sign-in was interrupted. Please try again.');
@@ -221,20 +227,28 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
 
       for (const [code, h] of handoffs) if (h.expiresMs < now()) handoffs.delete(code);
       const code = newToken();
-      handoffs.set(code, { userId: user.id, expiresMs: now() + HANDOFF_MS });
-      return back('linkedin', code);
+      // The handoff belongs to this browser's `state`, and the cookie stays until this browser has collected its session.
+      handoffs.set(code, { userId: user.id, expiresMs: now() + HANDOFF_MS, state: expected });
+      return back('linkedin', code, true);
     },
 
     // 3. The page swaps the handoff code for its session token, so the token itself is never in a URL.
+    //    The code alone is not enough: a link carrying someone else's code (/#linkedin=<their code>)
+    //    would sign the person who opens it in to that other account. Only the browser that went
+    //    through LinkedIn still holds the state cookie, so only it may collect the session.
     'POST /api/linkedin/session': async (request) => {
       const code = String((await readBody(request)).code ?? '');
       const handoff = handoffs.get(code);
       handoffs.delete(code);
-      const [user] = handoff && handoff.expiresMs >= now() ? await store.getUsers([handoff.userId]) : [];
+      const state = stateOf(request);
+      const mine = Boolean(handoff && state) && handoff.expiresMs >= now() && handoff.state === state;
+      const [user] = mine ? await store.getUsers([handoff.userId]) : [];
       if (!user) return fail(401, 'That sign-in has expired. Please sign in again.');
       const token = newToken();
       await store.setUserToken(user.id, sha(token));
-      return json({ token, me: self(user) });
+      const res = json({ token, me: self(user) });
+      res.headers.set('Set-Cookie', CLEAR_STATE);
+      return res;
     },
 
     // What we hold from LinkedIn about the caller, and the way to have it deleted.

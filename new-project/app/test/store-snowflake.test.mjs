@@ -67,8 +67,9 @@ test('Snowflake store on an account without the LinkedIn and photo tables: the a
   }, { fetch: mock.fetch });
   const api = createApi({ store: createSnowflakeStore(account), demo: true, linkedin });
   const APP = 'https://compass.example.test';
-  const call = (token) => async (method, path, body) => {
-    const res = await api(new Request(APP + path, { method, body: body ? JSON.stringify(body) : undefined, headers: token ? { authorization: `Bearer ${token}` } : {} }));
+  const call = (token, cookie) => async (method, path, body) => {
+    const headers = { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(cookie ? { cookie } : {}) };
+    const res = await api(new Request(APP + path, { method, body: body ? JSON.stringify(body) : undefined, headers }));
     return { status: res.status, body: res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text() };
   };
   const jpeg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16]).toString('base64');
@@ -81,10 +82,11 @@ test('Snowflake store on an account without the LinkedIn and photo tables: the a
   const consent = new URL(start.headers.get('location'));
   for (const [k, v] of Object.entries({ name: 'Ben Okoye', email: 'ben@example.com', decision: 'allow' })) consent.searchParams.set(k, v);
   const approved = await mock.handle(new Request(consent));
-  const landed = await api(new Request(approved.headers.get('location'), { headers: { cookie: start.headers.get('set-cookie').split(';')[0] } }));
+  const cookie = start.headers.get('set-cookie').split(';')[0];
+  const landed = await api(new Request(approved.headers.get('location'), { headers: { cookie } }));
   const code = new URLSearchParams(new URL(landed.headers.get('location')).hash.slice(1)).get('linkedin');
   assert.ok(code, 'LinkedIn sign-in completes without the table');
-  const b = await call()('POST', '/api/linkedin/session', { code });
+  const b = await call(null, cookie)('POST', '/api/linkedin/session', { code }); // the same browser collects its session
   assert.equal(b.body.me.name, 'Ben Okoye');
   const ada = call(a.body.token), ben = call(b.body.token);
   assert.equal((await ben('POST', '/api/profile', { name: 'Ben Okoye', linkedin: 'ben-okoye', offers: 'design', seeks: 'backend', photo: jpeg })).status, 200);

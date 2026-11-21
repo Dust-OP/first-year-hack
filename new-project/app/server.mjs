@@ -45,13 +45,41 @@ async function serveStatic(pathname, res) {
   }
 }
 
-const server = createServer(async (req, res) => {
+// The most we read of one request body. The API itself takes at most 200,000 characters
+// (PROFILE_BODY_MAX in lib/api.mjs: a profile with a 150,000-character photo), so this is just above it.
+const BODY_MAX_BYTES = 250_000;
+
+const server = createServer((req, res) => {
+  // Anyone can send anything. One request we cannot make sense of (a bad %-escape, a TRACE, an odd
+  // Host, a client that hangs up half way) gets "400" and must never take the server down.
+  handle(req, res).catch((err) => {
+    console.error(`[server] ${req.method} ${req.url}: ${err?.message ?? err}`);
+    if (res.headersSent) res.end(); // an answer was already on its way: finish it and add nothing
+    else res.writeHead(400, { 'Content-Type': 'text/plain' }).end('Bad request');
+  });
+});
+
+async function handle(req, res) {
   // Behind an HTTPS tunnel the request reaches us as plain http; the tunnel says what the browser used.
   const proto = String(req.headers['x-forwarded-proto'] ?? 'http').split(',')[0].trim() === 'https' ? 'https' : 'http';
-  const url = new URL(req.url, `${proto}://${req.headers.host ?? 'localhost'}`);
+  const base = new URL(`${proto}://${req.headers.host ?? 'localhost'}`);
+  // The path must never choose the host: "//evil.example/api/..." would otherwise become this request's
+  // origin, and the LinkedIn redirects are built from that origin.
+  const url = new URL(req.url.replace(/^[/\\]+/, '/'), base);
+  if (url.origin !== base.origin) throw new Error('request target names another host');
   if (url.pathname.startsWith('/api/')) {
     const chunks = [];
-    for await (const c of req) chunks.push(c);
+    let size = 0;
+    for await (const c of req) {
+      size += c.length;
+      // Stop reading here, not after the whole upload is in memory.
+      if (size > BODY_MAX_BYTES) {
+        res.writeHead(413, { 'Content-Type': 'application/json', Connection: 'close' });
+        res.end('{"error":"body too large"}', () => req.destroy());
+        return;
+      }
+      chunks.push(c);
+    }
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
     const response = await api(new Request(url, { method: req.method, headers: req.headers, body: hasBody ? Buffer.concat(chunks) : undefined }));
     res.writeHead(response.status, Object.fromEntries(response.headers));
@@ -60,7 +88,7 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === 'GET' && (await serveStatic(url.pathname, res))) return;
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
-});
+}
 
 const port = Number(process.env.PORT) || 3000;
 const signIn = [
