@@ -207,6 +207,26 @@ export function createSnowflakeStore(client) {
       return extra(async () => (await q(`SELECT * FROM LINKEDIN_PROFILES ORDER BY FIRST_SEEN_MS`)).map(toLinkedinProfile), []);
     },
 
+    /**
+     * Deletes one account and everything linked to it. Needs DELETE on REQUESTS and USERS, which
+     * setup.sql grants from 21 Nov 2026 (section "Account deletion"). REQUESTS goes first, so on an
+     * account where that grant has not been run the first statement is refused and nothing is removed.
+     */
+    async deleteUser(userId) {
+      const refused = (err) => /insufficient privileges|sqlState 42501/i.test(err.message);
+      try {
+        await q(`DELETE FROM REQUESTS WHERE FROM_ID = ? OR TO_ID = ?`, [userId, userId]);
+        await q(`DELETE FROM LOCATIONS WHERE USER_ID = ?`, [userId]);
+        await this.deleteLinkedinProfile(userId);
+        await this.setPhoto(userId, null);
+        await q(`DELETE FROM USERS WHERE ID = ?`, [userId]);
+      } catch (err) {
+        if (refused(err)) throw Object.assign(new Error('The app role may not delete accounts on this Snowflake account yet.'), { code: 'DELETE_NOT_GRANTED', cause: err });
+        throw err;
+      }
+      return true;
+    },
+
     async setPhoto(userId, dataUrl) {
       await extra(() => (dataUrl
         ? q(

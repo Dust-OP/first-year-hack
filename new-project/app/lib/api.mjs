@@ -250,6 +250,20 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       return json({ ok: true });
     },
 
+    // Deletes the caller's whole account: profile, position, invitations both ways, LinkedIn record, photo.
+    // If the database refuses, say so plainly: nothing was deleted, and the user must not think it was.
+    'POST /api/account/delete': async (request) => {
+      const me = await auth(request);
+      if (!me) return fail(401, 'Not signed in.');
+      try {
+        await store.deleteUser(me.id);
+      } catch (err) {
+        if (err.code !== 'DELETE_NOT_GRANTED') throw err;
+        return fail(503, 'Deleting accounts is not switched on for this database yet, so nothing was deleted. Please ask the team to delete your account.');
+      }
+      return json({ ok: true, deleted: true });
+    },
+
     // Email sign-in: the browser signed in at Logto and brings us the ID token once.
     'POST /api/session': async (request) => {
       if (!verifyIdToken) return fail(404, 'Email sign-in is not set up on this server.');

@@ -112,3 +112,44 @@ test('demo bots: five appear, one invites me, an invited bot accepts', async () 
   view = (await ada('POST', '/api/sync', { ...BUSH_HOUSE, accuracy: 5 })).body;
   assert.ok(view.connections.some((c) => c.person.id === target.id));
 });
+
+test('deleting an account removes the person everywhere and ends their session', async () => {
+  const t = 2_000_000;
+  const store = createMemoryStore();
+  const api = createApi({ store, demo: true, now: () => t });
+  const anon = client(api);
+  const signup = async (name, offers, seeks) => client(api, (await anon('POST', '/api/signup', { name, linkedin: `${name.toLowerCase()}-tester`, offers, seeks })).body.token);
+  const ada = await signup('Ada', 'backend', 'design');
+  const ben = await signup('Ben', 'design', 'backend');
+  const cy = await signup('Cy', 'data', 'backend');
+
+  await ada('POST', '/api/sync', { ...BUSH_HOUSE, accuracy: 5 });
+  await cy('POST', '/api/sync', { ...offset(BUSH_HOUSE, 180, 80), accuracy: 5 });
+  const benNear = (await ben('POST', '/api/sync', { ...offset(BUSH_HOUSE, 90, 50), accuracy: 5 })).body.nearby;
+  const adaId = benNear.find((p) => p.name === 'Ada').id;
+  const benId = (await ada('POST', '/api/sync', { ...BUSH_HOUSE, accuracy: 5 })).body.nearby.find((p) => p.name === 'Ben').id;
+
+  // Ada invited Ben (accepted) and Cy invited Ada (pending): both directions must go.
+  const r1 = (await ada('POST', '/api/requests', { toId: benId })).body;
+  await ben('POST', '/api/requests/respond', { id: r1.id, action: 'accept' });
+  await cy('POST', '/api/requests', { toId: adaId });
+  await store.saveLinkedinProfile(adaId, { sub: 'li-ada', name: 'Ada', email: 'ada@example.com' }, t);
+  await store.setPhoto(adaId, 'data:image/jpeg;base64,AAAA');
+  assert.equal((await store.requestsFor(adaId)).length, 2);
+
+  assert.equal((await anon('POST', '/api/account/delete')).status, 401, 'needs a session');
+  const del = await ada('POST', '/api/account/delete');
+  assert.equal(del.status, 200);
+  assert.equal(del.body.deleted, true);
+
+  const benAfter = (await ben('POST', '/api/sync', { ...offset(BUSH_HOUSE, 90, 50), accuracy: 5 })).body;
+  assert.equal(benAfter.nearby.some((p) => p.id === adaId), false, 'gone from the compass');
+  assert.equal(benAfter.connections.length, 0, 'gone from connections');
+  assert.equal((await cy('POST', '/api/sync', {})).body.outgoing.length, 0, 'invitation to her is gone');
+  assert.equal((await store.requestsFor(adaId)).length, 0, 'invitation rows deleted, not just hidden');
+  assert.equal((await store.requestsFor(benId)).length, 0);
+  assert.equal((await ada('GET', '/api/me')).status, 401, 'old token no longer works');
+  assert.equal(await store.getLinkedinProfile(adaId), null, 'LinkedIn record gone');
+  assert.equal(await store.getAvatar(adaId), null, 'photo and profile gone');
+  assert.equal((await ada('POST', '/api/account/delete')).status, 401, 'cannot delete twice');
+});

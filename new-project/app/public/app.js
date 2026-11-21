@@ -429,6 +429,19 @@ async function renderLinkedinData() {
 }
 $('tab-people').addEventListener('click', () => renderLinkedinData().catch(() => {}));
 
+// Delete my account: everything the app holds about you, after one confirmation.
+$('delete-account').addEventListener('click', async () => {
+  if (!confirm('Delete your account? Your profile, position, invitations, LinkedIn record and photo are removed for good.')) return;
+  try {
+    await api('POST', '/api/account/delete');
+  } catch (ex) {
+    alert(ex.message);
+    return;
+  }
+  localStorage.removeItem('cc.token');
+  location.reload();
+});
+
 let peopleKey = '';
 function renderPeople() {
   const { incoming, outgoing, connections } = state.inbox;

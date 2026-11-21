@@ -103,6 +103,22 @@ export function createMemoryStore() {
       return [...linkedinProfiles.values()].sort((a, b) => a.firstSeenMs - b.firstSeenMs);
     },
 
+    /**
+     * Deletes one account and everything linked to it: position, invitations sent or received,
+     * LinkedIn record, picked photo, sign-in links and the profile itself. Returns false if unknown.
+     */
+    async deleteUser(userId) {
+      if (!users.has(userId)) return false;
+      locations.delete(userId);
+      for (const [id, r] of requests) if (r.fromId === userId || r.toId === userId) requests.delete(id);
+      linkedinProfiles.delete(userId);
+      photos.delete(userId);
+      for (const [hash, id] of byToken) if (id === userId) byToken.delete(hash);
+      for (const [sub, id] of bySub) if (id === userId) bySub.delete(sub);
+      users.delete(userId);
+      return true;
+    },
+
     async setPhoto(userId, dataUrl) {
       if (dataUrl) photos.set(userId, dataUrl);
       else photos.delete(userId);

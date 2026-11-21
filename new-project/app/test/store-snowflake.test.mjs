@@ -127,3 +127,19 @@ test('Snowflake store: an unexpected failure on the new tables still lets people
   assert.equal(errors.length, 2, 'each failure is logged');
   assert.match(errors.join('\n'), /picked photo was NOT saved[\s\S]*picture lookup failed, serving initials/);
 });
+
+test('account deletion on Snowflake: refused cleanly without the grant, complete with it', async () => {
+  const sent = [];
+  const deny = (s) => { throw new Error(`Snowflake 422: SQL access control error:\nInsufficient privileges to operate on table '${s.match(/FROM (\w+)/)[1]}'. (sqlState 42501)`); };
+  const noGrant = createSnowflakeStore({ query: async (sql) => { const s = sql.replace(/\s+/g, ' ').trim(); sent.push(s); return /^DELETE FROM (REQUESTS|USERS)/.test(s) ? deny(s) : []; } });
+  await assert.rejects(noGrant.deleteUser('u1'), (err) => err.code === 'DELETE_NOT_GRANTED');
+  assert.equal(sent.length, 1, 'stops at the first refused statement, so nothing else is removed');
+
+  sent.length = 0;
+  const granted = createSnowflakeStore({ query: async (sql) => { sent.push(sql.replace(/\s+/g, ' ').trim()); return []; } });
+  assert.equal(await granted.deleteUser('u1'), true);
+  for (const table of ['REQUESTS', 'LOCATIONS', 'LINKEDIN_PROFILES', 'USER_PHOTOS', 'USERS']) {
+    assert.ok(sent.some((s) => s.startsWith(`DELETE FROM ${table}`)), `deletes from ${table}`);
+  }
+  assert.ok(sent.at(-1).startsWith('DELETE FROM USERS'), 'the profile goes last');
+});
