@@ -1,6 +1,7 @@
 // Career Compass, demo v1: wires sign-up, location, heading, the dial and the inbox together.
 
 import { createLogto, linkedin } from './auth.js';
+import { setupEmailCode } from './email-code.js';
 import { createCompass } from './compass.js';
 import { playConfirm } from './confirm.js';
 import { createHeading } from './heading.js';
@@ -708,7 +709,7 @@ $('signin-linkedin').addEventListener('click', () => {
 // Back from the sign-in page brings this page back exactly as it was left: buttons still disabled.
 window.addEventListener('pageshow', (e) => {
   if (!e.persisted || !state.signinOn) return;
-  $('signin').disabled = !state.signinOn.email;
+  $('signin').disabled = !state.logto;
   $('signin-linkedin').disabled = !state.signinOn.linkedin;
 });
 $('quick').addEventListener('click', () => show('signup'));
@@ -722,13 +723,16 @@ $('quick').addEventListener('click', () => show('signup'));
   $('quick').hidden = !health.quickSignup;
   // Both ways to sign in are always offered. One this server has not set up stays visible but greyed out,
   // so the choice never silently disappears (it did when .env had neither LOGTO_APP_ID nor LINKEDIN_*).
-  state.signinOn = { email: Boolean(state.logto), linkedin: Boolean(health.linkedin) };
+  // Email means our own emailed code when it is on (RESEND_API_KEY), which replaces the Logto button.
+  state.signinOn = { email: Boolean(health.emailCode || state.logto), linkedin: Boolean(health.linkedin) };
   const notSetUp = 'Not set up on this server yet.';
-  $('signin').disabled = !state.signinOn.email;
+  $('email-code').hidden = !health.emailCode;
+  $('signin').hidden = $('signin-fine').hidden = Boolean(health.emailCode);
+  $('signin').disabled = !state.logto;
   $('signin-linkedin').disabled = !state.signinOn.linkedin;
-  if (!state.signinOn.email) $('signin-fine').textContent = notSetUp;
+  if (!state.logto) $('signin-fine').textContent = notSetUp;
   if (!state.signinOn.linkedin) $('signin-linkedin-fine').textContent = notSetUp;
-  if (state.signinOn.linkedin || !state.signinOn.email) $('signin').className = 'ghost'; // one main button
+  if (state.signinOn.linkedin || !state.logto) $('signin').className = 'ghost'; // one main button
   if (!state.signinOn.email && !state.signinOn.linkedin && !health.quickSignup) {
     $('welcome-error').textContent = 'No way to sign in is set up on this server yet.';
     $('welcome-error').hidden = false;
@@ -747,6 +751,7 @@ $('quick').addEventListener('click', () => show('signup'));
     $('welcome-error').hidden = false;
     show('welcome');
   };
+  if (health.emailCode) setupEmailCode({ api, signedIn, showError: (msg) => { $('welcome-error').textContent = msg; $('welcome-error').hidden = !msg; } });
   // Coming back from LinkedIn: our server did the exchange and left a one-time handoff code for this page.
   const fromLinkedin = linkedin.takeReturn();
   if (fromLinkedin) {

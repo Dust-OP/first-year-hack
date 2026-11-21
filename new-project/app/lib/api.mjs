@@ -18,6 +18,9 @@ const HANDOFF_MS = 60_000; // how long the page has to collect its session after
 const STATE_COOKIE = 'cc_li_state';
 const CLEAR_STATE = `${STATE_COOKIE}=; Path=/api/linkedin; Max-Age=0; HttpOnly; SameSite=Lax`;
 const PROFILE_BODY_MAX = 200_000; // the profile form may carry a small photo
+const CODE_COOKIE = 'cc_ec'; // binds an emailed sign-in code to the browser that asked for it
+const CLEAR_CODE = `${CODE_COOKIE}=; Path=/api/email-code; Max-Age=0; HttpOnly; SameSite=Strict`;
+const EMAIL_SUB = 'email|'; // an email-code sign-in, told apart from Logto and LinkedIn in the user's `sub`
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 const json = (body, status = 200) =>
@@ -46,7 +49,8 @@ const profile = (u) => ({
   picture: avatarUrl(u.id),
 });
 const LINKEDIN_SUB = 'linkedin|'; // how a LinkedIn sign-in is told apart from a Logto one in the user's `sub`
-const signedInWith = (u) => (u.sub?.startsWith(LINKEDIN_SUB) ? 'linkedin' : u.sub ? 'email' : 'quick');
+const signedInWith = (u) =>
+  u.sub?.startsWith(LINKEDIN_SUB) ? 'linkedin' : u.sub?.startsWith(EMAIL_SUB) ? 'email-code' : u.sub ? 'email' : 'quick';
 /** What you may see about yourself. Email never goes to anyone else. `pictureVersion` makes a just-changed photo reload. */
 const self = (u, pictureVersion) => ({
   ...profile(u), picture: avatarUrl(u.id, pictureVersion), email: u.email ?? null, needsProfile: !u.linkedin, signedInWith: signedInWith(u),
@@ -77,15 +81,19 @@ const DEMO_PEOPLE = [
  * @param verifyIdToken  from lib/logto.mjs; required when `logto` is set
  * @param linkedin       from createLinkedin() in lib/linkedin.mjs when LinkedIn sign-in is configured, else null
  * @param publicUrl      the app's own address when it is fixed; otherwise the address each request came in on
+ * @param emailCode      from createEmailCode() in lib/email-code.mjs when email-code sign-in is on, else null.
+ *                       Its state is in process memory: only enable it on a single long-running server.
  */
-export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null, linkedin = null, publicUrl = null }) {
+export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null, linkedin = null, publicUrl = null, emailCode = null }) {
   // The quick sign-up has no email check. Once real sign-in is on, keep it only for demos.
-  const quickSignup = (!logto && !linkedin) || demo;
+  const quickSignup = (!logto && !linkedin && !emailCode) || demo;
   // One-time codes that hand a finished LinkedIn sign-in over to the page. Kept in memory: one server process.
   const handoffs = new Map(); // code -> { userId, expiresMs, state }
   const originOf = (request) => (publicUrl || new URL(request.url).origin).replace(/\/+$/, '');
   /** The `state` this browser was given when it started a LinkedIn sign-in, read from its cookie. */
   const stateOf = (request) => new RegExp(`(?:^|;\\s*)${STATE_COOKIE}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1];
+  /** The key this browser was given when it asked for an email code, read from its cookie. */
+  const codeKeyOf = (request) => new RegExp(`(?:^|;\\s*)${CODE_COOKIE}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1];
   /**
    * Photos and LinkedIn records ride along with a sign-up or sign-in. If the store cannot save one
    * (for example on a database that is not ready for them), the person still gets in; it is logged.
@@ -157,6 +165,7 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
         ok: true, store: store.kind, demo, quickSignup, auth: logto ? { endpoint: logto.endpoint, appId: logto.appId } : null,
         // Only whether it is on. The client id and the secret stay on the server.
         linkedin: linkedin ? { standIn: Boolean(linkedin.mock) } : null,
+        emailCode: Boolean(emailCode),
       }),
 
     'POST /api/signup': async (request) => {
@@ -273,6 +282,42 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       if (!me) return fail(401, 'Not signed in.');
       await store.deleteLinkedinProfile(me.id);
       return json({ ok: true });
+    },
+
+    // ----- Sign in with an emailed code (lib/email-code.mjs) -----
+
+    // 1. Email a 6-digit code. The answer never says whether the address already has an account.
+    'POST /api/email-code/start': async (request, ctx) => {
+      if (!emailCode) return fail(404, 'Email sign-in is not set up on this server.');
+      const { email } = await readBody(request);
+      const browserKey = emailCode.newBrowserKey();
+      const out = await emailCode.start({ email, browserKey, client: ctx.client });
+      const res = json({ email: out.email, expiresMs: out.expiresMs, resendWaitMs: emailCode.resendWaitMs });
+      // Only this browser can redeem the code: the key is in an HttpOnly cookie, never in the page or a URL.
+      const secure = originOf(request).startsWith('https:') ? '; Secure' : '';
+      res.headers.set('Set-Cookie', `${CODE_COOKIE}=${browserKey}; Path=/api/email-code; Max-Age=${emailCode.ttlMs / 1000}; HttpOnly; SameSite=Strict${secure}`);
+      return res;
+    },
+
+    // 2. Check the code. First visit: an account with no profile yet, which stays off every compass until
+    //    the profile is filled in. Accounts are not merged with Logto or LinkedIn ones that share the address.
+    'POST /api/email-code/verify': async (request) => {
+      if (!emailCode) return fail(404, 'Email sign-in is not set up on this server.');
+      const { code } = await readBody(request);
+      const email = emailCode.verify({ browserKey: codeKeyOf(request), code });
+      const token = newToken();
+      let user = await store.getUserBySub(EMAIL_SUB + email);
+      if (user) {
+        await store.setUserToken(user.id, sha(token));
+      } else {
+        user = await store.createUser({
+          id: randomUUID(), sub: EMAIL_SUB + email, email, tokenHash: sha(token),
+          name: clean(email.split('@')[0], 60), headline: '', linkedin: null, offers: [], seeks: [], demo: false,
+        });
+      }
+      const res = json({ token, me: self(user) });
+      res.headers.set('Set-Cookie', CLEAR_CODE);
+      return res;
     },
 
     // Email sign-in: the browser signed in at Logto and brings us the ID token once.
@@ -426,12 +471,13 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     },
   };
 
-  return async function handle(request) {
+  /** `ctx.client`: who is asking (the server passes the client's IP address), for the email-code send limits. */
+  return async function handle(request, ctx = {}) {
     const { pathname } = new URL(request.url);
     const route = routes[`${request.method} ${pathname}`];
     if (!route) return fail(404, 'Not found.');
     try {
-      return await route(request);
+      return await route(request, ctx);
     } catch (err) {
       if (err.status) return fail(err.status, err.message);
       console.error(`[api] ${request.method} ${pathname}:`, err);

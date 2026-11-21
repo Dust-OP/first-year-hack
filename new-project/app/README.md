@@ -6,7 +6,7 @@ Built 21 Nov 2026. No dependencies: Node 20+ only.
 
 ## The flow
 
-1. **Sign in with LinkedIn** (your name and photo come from LinkedIn) or **with email** (a one-time code sent by Logto), then fill in your profile. After a LinkedIn sign-in the only question is your LinkedIn share link ("Open my LinkedIn" and "Paste link" help you get it). After an email sign-in it is name, what you do, your LinkedIn share link, an optional photo, what you offer and what you are looking for. The link may be the share link with its `?utm_…` tail, the whole text a share sheet copies, `linkedin.com/in/...` or a bare handle; the app keeps only `https://www.linkedin.com/in/<handle>`. The first screen always offers both sign-ins; one this server has not set up (no `LOGTO_APP_ID`, or no `LINKEDIN_CLIENT_ID`/`LINKEDIN_CLIENT_SECRET`) is shown greyed out with "Not set up on this server yet". In demo mode the same screen also offers a quick sign-up with no check.
+1. **Sign in with LinkedIn** (your name and photo come from LinkedIn) or **with email** (a one-time code sent by Logto), then fill in your profile. After a LinkedIn sign-in the only question is your LinkedIn share link ("Open my LinkedIn" and "Paste link" help you get it). After an email sign-in it is name, what you do, your LinkedIn share link, an optional photo, what you offer and what you are looking for. The link may be the share link with its `?utm_…` tail, the whole text a share sheet copies, `linkedin.com/in/...` or a bare handle; the app keeps only `https://www.linkedin.com/in/<handle>`. The first screen always offers both sign-ins; one this server has not set up (email needs `RESEND_API_KEY` for the emailed code or `LOGTO_APP_ID` for Logto; LinkedIn needs `LINKEDIN_CLIENT_ID`/`LINKEDIN_CLIENT_SECRET`) is shown greyed out with "Not set up on this server yet". In demo mode the same screen also offers a quick sign-up with no check.
 2. **Start compass.** The phone asks for location and motion access. Without a position you are not on anyone's compass, and the page says why and what to do.
 3. The dial shows everyone within 500 m who has the app open. The **red needle** points at your best match (tap anyone else to follow them instead).
 4. **Turn until the needle points up.** The dial moves like a real compass: it follows you with a little inertia, overshoots slightly and settles. Hold your aim on someone (within 15°) for a moment and the compass has found them: a ring closes round the rim, the markings fade into **their profile picture** in the same glass disc, and their card pops up with who they are, why they match and their LinkedIn link. Turn 28° or more away, tap the picture or close the card, and the compass fades back. Tapping someone's dot shows them at once.
@@ -102,6 +102,17 @@ Android only (Chrome):
 | Profile pictures | The dial shows `picture` when a person carries one (a URL, or `null`). **The server on this branch does not send it yet**, so today everyone appears as large initials. Checked with pictures added to the server's answers on their way to the page: a good one, `null`, slow, missing (404) and not-an-image |
 | Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
+
+### Sign-in with an emailed code (wayrise.app)
+
+With `RESEND_API_KEY` in `.env`, the welcome screen asks for an email address and emails a 6-digit code from `hello@wayrise.app` through Resend. It behaves like Logto's email code (10 minutes, a minute between codes), but runs in this server, with no Cila accounts or branding. It replaces the Logto button when both are set up.
+
+- **Domain:** `wayrise.app` (Name.com) runs its DNS on Cloudflare. Resend sends from it (region eu-west-1, DKIM, SPF and DMARC records in Cloudflare). Mail sent to `hello@wayrise.app` is forwarded to a team member's Gmail by Cloudflare Email Routing. Both directions were tested on 21 Nov.
+- **How it works:** `POST /api/email-code/start {email}` emails the code and sets an HttpOnly cookie `cc_ec` holding a random key for this browser. `POST /api/email-code/verify {code}` checks the code against that browser's record and issues the app's session like the other sign-ins. Users are stored with `sub = 'email|<address>'` and are not merged with Logto or LinkedIn accounts that share the address.
+- **Limits:** 5 wrong codes per code. Codes to one address: one a minute, five an hour. One client (IP address): ten an hour. All addresses together: 90 a day, under Resend's free 100 a day. `/start` never looks up accounts, so its answer is the same for known and unknown addresses.
+- **Where that state lives:** in the server process's memory (`lib/email-code.mjs`). That is exact for `npm start`, but it is not shared between processes and is lost on restart. So only `server.mjs` turns this on. Do not enable it on Vercel or any other multi-instance host without moving the state to a shared store.
+- Behind the `cloudflared` tunnel every request reaches the server from this machine, so the client's address comes from the tunnel's `CF-Connecting-IP` header. That header is trusted only on requests from this machine.
+- Tests use a fake mailer (`test/email-code.test.mjs`); nothing is sent.
 
 ### Sign-in (Logto)
 
@@ -227,6 +238,7 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 |---|---|
 | `server.mjs` | Local server: static files plus the API |
 | `lib/api.mjs` | All API routes as one `(Request) => Response` function |
+| `lib/email-code.mjs`, `lib/mailer.mjs`, `public/email-code.js` | Sign-in with an emailed code: codes and limits, sending through Resend, the email and code form |
 | `lib/logto.mjs`, `public/auth.js` | Email sign-in: server-side ID token check, browser-side OpenID Connect flow |
 | `dev/mock-oidc.mjs` | Local stand-in for Logto, for tests and offline tries |
 | `lib/linkedin.mjs` | Sign in with LinkedIn, server side: the redirect to LinkedIn, the code exchange with the client secret, the userinfo call, and what is kept from the answer |
