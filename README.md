@@ -73,6 +73,7 @@ Whether someone is beginning their career, developing an innovative idea, or exp
 WAYRISE is built around one belief:
 **Success isn’t only about knowing where to go. It’s about finding the people who help you get there.**
 
+---
 
 
 ## Watch Our Promotional Video
