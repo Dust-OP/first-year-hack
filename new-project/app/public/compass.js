@@ -4,12 +4,30 @@
 // Interface for whoever restyles this (the front-end design session):
 //   const c = createCompass(svg, { onPick(id) })
 //   c.setPeople(list, radiusM)   list items: { id, name, bearing, distanceM, spreadDeg, score, relation }
-//   c.render(heading, { targetId, aimedId })   call every animation frame
+//   c.render(heading, { targetId, aimedId, lock, dtMs, turnRate })   call every animation frame
+//       heading    where the user faces, already smoothed by the caller (app.js runs it through
+//                  the spring in physics.js), degrees clockwise from north
+//       targetId   who the needle leads to; aimedId: who is straight ahead
+//       lock       0..1, optional: how close the aim is to locking on (draws the ring at the rim)
+//       dtMs       optional: time since the last call; measured here when it is left out
+//       turnRate   optional: how fast `heading` is changing, degrees a second (see the needle)
 // Keep that interface and app.js needs no changes.
 //
 // Look: a liquid-glass disc (the glass itself is .dial-wrap::before in style.css; the SVG draws
 // the markings on top). Motion: people fade and grow in when they appear, glide when they move,
-// shrink away when they leave, and the needle swings to a new target instead of jumping.
+// and shrink away when they leave.
+//
+// The needle is a magnetised needle in fluid (physics.js, numbers in tuning.js): it swings to a
+// new target, overshoots a little and settles. When the dial turns, the fluid carries the needle
+// a few degrees along with the turn, so it trails and then swings back, as in a real compass.
+// With prefers-reduced-motion it moves to its target quickly with no overshoot and no trail.
+//
+// When the compass has found someone, .dial-wrap gets the class is-revealed and this whole SVG
+// fades out under that person's picture (reveal.js, style.css). It keeps rendering underneath, so
+// it is in the right place when it fades back.
+
+import { createSpring } from './physics.js';
+import { TUNING } from './tuning.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs = {}, parent) {
@@ -23,7 +41,6 @@ const polar = (deg, r) => {
   return [Math.cos(a) * r, Math.sin(a) * r];
 };
 const initials = (name) => name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
-const diff = (from, to) => ((to - from + 540) % 360) - 180; // shortest signed turn, degrees
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 export function createCompass(svg, { onPick }) {
@@ -69,12 +86,18 @@ export function createCompass(svg, { onPick }) {
   // People sit above the needle so their initials stay readable; this layer turns with the rose.
   const peopleLayer = el('g', {}, svg);
   const leavingLayer = el('g', {}, svg); // people fading out, kept apart so they never shift the live order
+  // Lock ring: fills clockwise from the top while the aim holds steady on someone. When it
+  // closes, the dial gives way to their picture.
+  const lockRing = el('circle', { r: 160.5, class: 'cc-lock', pathLength: 1, transform: 'rotate(-90)' }, svg);
   // Lubber line: the fixed mark for "the way you are facing".
   el('path', { d: 'M0 -152 L7 -166 Q0 -169 -7 -166 Z', class: 'cc-lubber' }, svg);
 
   let nodes = new Map(); // id -> { g, label, title, person }
   let radius = 500;
-  let needleBearing = null; // world bearing the needle shows, eased towards the target's
+  const needleSpring = createSpring(TUNING.needle); // the world bearing the needle shows
+  let needleAwake = false;
+  let lastRender = 0;
+  let lockShown = 0;
   let spreadOn = false;
   const dotR = (d) => 28 + 80 * Math.sqrt(Math.min(d, radius) / radius);
 
@@ -132,7 +155,10 @@ export function createCompass(svg, { onPick }) {
       }
     },
 
-    render(heading, { targetId, aimedId } = {}) {
+    render(heading, { targetId, aimedId, lock = 0, dtMs, turnRate = 0 } = {}) {
+      const now = performance.now();
+      const dt = Number.isFinite(dtMs) ? dtMs : lastRender ? Math.min(now - lastRender, TUNING.maxFrameMs) : 0;
+      lastRender = now;
       rose.setAttribute('transform', `rotate(${-heading})`);
       peopleLayer.setAttribute('transform', `rotate(${-heading})`);
       leavingLayer.setAttribute('transform', `rotate(${-heading})`);
@@ -144,13 +170,27 @@ export function createCompass(svg, { onPick }) {
         g.classList.toggle('is-target', id === targetId);
       }
       const target = nodes.get(targetId)?.person;
-      // The needle swings to a new target over a few frames instead of jumping. The easing is on
-      // the world bearing, so turning the phone never makes the needle lag behind.
+      // The needle lives in the world: its pull is towards the target's bearing, not towards a
+      // place on the screen, so turning the phone does not by itself move it off the target.
       const want = target ? target.bearing : 0;
-      if (needleBearing === null || reduceMotion.matches) needleBearing = want;
-      else needleBearing = (needleBearing + diff(needleBearing, want) * 0.2 + 360) % 360;
-      needle.setAttribute('transform', `rotate(${needleBearing - heading})`);
+      if (!needleAwake) { needleSpring.set(want); needleAwake = true; }
+      if (reduceMotion.matches) {
+        needleSpring.tune(TUNING.reduced);
+        needleSpring.step(want, dt);
+      } else {
+        const N = TUNING.needle;
+        needleSpring.tune(N);
+        // Fluid drag: while the dial turns at turnRate the needle rests this far behind its target.
+        const trail = Math.max(-N.maxDragDeg, Math.min(N.maxDragDeg, (2 * N.zeta * N.drag * turnRate) / (2 * Math.PI * N.hz)));
+        needleSpring.step(want, dt, trail);
+      }
+      needle.setAttribute('transform', `rotate(${(needleSpring.angle - heading).toFixed(2)})`);
       needle.classList.toggle('is-north', !target);
+      if (lock !== lockShown) {
+        lockShown = lock;
+        lockRing.style.strokeDashoffset = String(1 - lock);
+        lockRing.classList.toggle('is-on', lock > 0);
+      }
       // A wedge as wide as the GPS doubt: wide wedge = "roughly over there". It fades in and out.
       const showSpread = Boolean(target && target.spreadDeg > 8);
       if (showSpread) {

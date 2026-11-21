@@ -477,6 +477,220 @@ button.is-busy::after {
 /* The needle lies over the person it points at: let taps fall through to them. */
 .cc-needle, .cc-pin, .cc-lubber, .cc-spread { pointer-events: none; }
 
+/* ---------- compass physics, lock-on and the reveal ----------
+   Everything the moving compass adds is in this one block, so it can be read and changed without
+   touching the rules above.
+
+   The reveal: when the compass has found someone, the markings (rose, ticks, needle, dots) sink
+   back into a blur and that person's picture comes forward out of one, inside the same glass disc.
+   The disc itself (.dial-wrap::before) never moves, so nothing on the page shifts. reveal.js fills
+   the button and sets its `hidden` attribute; lockon.js decides when. .dial-wrap.is-revealed is on
+   exactly while the picture is on show. Away from that state the button takes no taps, and once
+   it has faded out it is `hidden`, so it can never sit unseen over the dial. */
+
+.dial-wrap #dial { transition: opacity .6s var(--ease-out), filter .6s var(--ease-out), transform .7s var(--ease-out); }
+/* Turning by hand: the dial can be taken hold of. */
+.dial-wrap.is-by-hand { cursor: grab; }
+.dial-wrap.is-grabbed, .dial-wrap.is-grabbed * { cursor: grabbing !important; }
+
+.dial-wrap.is-revealed #dial {
+  opacity: 0;
+  filter: blur(10px);
+  transform: scale(.92);
+  pointer-events: none;
+  transition-duration: .36s;
+  transition-timing-function: var(--ease-in);
+}
+.reveal {
+  position: absolute;
+  inset: 6.4%; /* inside the tick ring, so a band of glass frames the picture */
+  /* No z-index on purpose: it sits above the dial by coming after it, and so can never rise
+     above the card, the tab bar or a dialog. */
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  clip-path: circle(50%);
+  background: none;
+  color: #fff;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1.1);
+  filter: blur(16px);
+  transition: opacity .3s var(--ease-in), transform .3s var(--ease-in), filter .3s var(--ease-in);
+}
+.dial-wrap.is-revealed .reveal {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  filter: none;
+  transition: opacity .55s var(--ease-out) .1s, transform .8s var(--ease-spring) .1s, filter .55s var(--ease-out) .1s;
+}
+/* The glass edge over the picture: light catches the top, shade gathers at the bottom. */
+.reveal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .55), inset 0 0 0 1px rgba(255, 255, 255, .3), inset 0 -16px 34px rgba(0, 0, 0, .16);
+}
+.reveal:focus-visible { outline: none; }
+.reveal:focus-visible::after { box-shadow: inset 0 0 0 4px var(--blue); }
+/* No picture, a slow one or a failed one: large initials on the person's own colour.
+   Colour and gradient are two properties: where color-mix() is missing the plain colour stays. */
+.reveal-face {
+  --tint: var(--blue);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background-color: var(--tint);
+  background-image:
+    radial-gradient(110% 80% at 28% 12%, rgba(255, 255, 255, .42), transparent 62%),
+    linear-gradient(160deg, color-mix(in srgb, var(--tint) 74%, #fff), var(--tint) 52%, color-mix(in srgb, var(--tint) 66%, #000));
+}
+.reveal-initials {
+  font-size: min(27vw, 108px);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .2);
+  transform: translate3d(calc(var(--aim, 0) * -.1em), -.12em, 0);
+}
+.reveal-photo-slot { position: absolute; inset: 0; }
+.reveal-photo {
+  position: absolute;
+  left: -6%;
+  top: -6%;
+  width: 112%; /* a little larger than the disc: room to slide as the aim drifts */
+  height: 112%;
+  max-width: none;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity .5s var(--ease-out);
+  transform: translate3d(calc(var(--aim, 0) * -4.5%), 0, 0);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.reveal-photo.is-in { opacity: 1; }
+.reveal-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, .64), rgba(0, 0, 0, .3) 24%, transparent 48%),
+    radial-gradient(circle, transparent 62%, rgba(0, 0, 0, .14));
+}
+.reveal-caption {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: 10.5%;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  text-align: center;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, .5);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .25s var(--ease-in), transform .25s var(--ease-in);
+}
+.dial-wrap.is-revealed .reveal-caption {
+  opacity: 1;
+  transform: none;
+  transition: opacity .45s var(--ease-out) .3s, transform .65s var(--ease-spring) .3s;
+}
+.reveal-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.24rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.reveal-where { font-size: .8rem; font-weight: 600; opacity: .88; font-variant-numeric: tabular-nums; }
+/* The way back: a small compass mark where the lubber line was. The whole picture is the button. */
+.reveal-back {
+  position: absolute;
+  top: 5.5%;
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .24);
+  -webkit-backdrop-filter: blur(10px) saturate(170%);
+  backdrop-filter: blur(10px) saturate(170%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 2px 10px rgba(0, 0, 0, .2);
+  opacity: 0;
+  scale: .6;
+  transition: opacity .25s var(--ease-in), scale .25s var(--ease-in);
+}
+.dial-wrap.is-revealed .reveal-back { opacity: 1; scale: 1; transition: opacity .4s var(--ease-out) .4s, scale .55s var(--ease-spring) .4s; }
+.reveal-back svg { display: block; width: 18px; height: 18px; }
+/* Another person while the picture is showing: the content cross-fades. */
+.reveal.is-swapping > * { animation: reveal-swap .45s var(--ease-out) both; }
+@keyframes reveal-swap { from { opacity: 0; filter: blur(10px); } }
+
+/* Lock ring: closes while the aim holds steady on someone (compass.js sets the dash offset). */
+.cc-lock {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s var(--ease-out);
+}
+.cc-lock.is-on { opacity: .9; }
+
+/* The phone says its compass is unsure: figure of eight. Glass like .status, tinted orange. */
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 18px;
+  background-color: var(--glass);
+  background-image: linear-gradient(rgba(255, 149, 0, .15), rgba(255, 149, 0, .15));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 0 0 var(--glass-rim), inset 0 0 0 1px var(--glass-edge), var(--glass-shadow);
+  color: var(--label);
+  font-size: .84rem;
+  line-height: 1.38;
+}
+.hint-eight { flex: none; width: 46px; height: 23px; overflow: visible; }
+.hint-eight path { fill: none; stroke: var(--orange); stroke-width: 2; stroke-linecap: round; opacity: .5; }
+.hint-dot { fill: var(--orange); }
+
+/* Demo tools: the live heading readout sits above the store readout. */
+.engine.sensor { margin-bottom: 8px; }
+.engine.sensor:empty { display: none; }
+
+@media (prefers-reduced-transparency: reduce) {
+  .hint, .reveal-back { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+/* Reduced motion: the reveal keeps its cross-fade and loses the scale, the blur and the slide. */
+@media (prefers-reduced-motion: reduce) {
+  .dial-wrap #dial, .reveal, .reveal-caption, .reveal-photo, .reveal-initials { transform: none !important; filter: none !important; }
+  .reveal-back { scale: 1 !important; }
+  .hint-dot { display: none; }
+}
+
 /* ---------- profile card: a glass sheet that floats above the tab bar ---------- */
 
 .card, .row { position: relative; color: var(--label); }

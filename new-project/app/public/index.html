@@ -48,8 +48,18 @@
   <main id="view-compass" hidden>
     <div class="dial-wrap">
       <svg id="dial" role="img" aria-label="Compass showing people nearby"></svg>
+      <!-- When the compass has found someone, the dial fades into their picture (reveal.js fills this). -->
+      <button id="reveal" class="reveal" type="button" hidden></button>
       <button id="start" class="primary start" type="button">Start compass</button>
     </div>
+    <!-- Compass trouble the user can fix: shown only when the phone says its compass is unsure. -->
+    <p id="hint" class="hint" role="status" hidden>
+      <svg class="hint-eight" viewBox="0 0 48 24" aria-hidden="true">
+        <path id="hint-path" d="M24 12C29 4 42 3 42 12C42 21 29 20 24 12C19 4 6 3 6 12C6 21 19 20 24 12Z"/>
+        <circle class="hint-dot" r="2.8"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#hint-path"/></animateMotion></circle>
+      </svg>
+      <span id="hint-text"></span>
+    </p>
     <p id="status" class="status" aria-live="polite">Tap “Start compass” and allow location and motion access.</p>
 
     <section id="card" class="card" hidden aria-live="polite"></section>
@@ -62,6 +72,7 @@
         <button id="hide" type="button">Go invisible</button>
         <button id="signout" type="button">Sign out</button>
       </div>
+      <pre id="sensor" class="engine sensor"></pre>
       <pre id="engine" class="engine"></pre>
     </details>
   </main>
