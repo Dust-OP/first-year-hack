@@ -38,12 +38,17 @@ first-year-hack/                  repository root
         │   ├── SUMMARY.md
         │   ├── *.md              worker reports
         │   └── evidence/         E-*.json source notes
-        └── compass-frontend-design/   front-end design and tech for the compass dial
+        ├── compass-frontend-design/   front-end design and tech for the compass dial
+        │   ├── RESULT.md
+        │   ├── github-frontend.md       26 GitHub/demo candidates, source read, line anchors
+        │   ├── community-reception.md   17 candidates with community reception and tech feedback
+        │   ├── showcase/                visual gallery: index.html + img/ screenshots of every candidate
+        │   └── evidence/
+        └── snowflake-real-projects/   what Snowflake does in real projects, roles, draft setup.sql
             ├── RESULT.md
-            ├── github-frontend.md       26 GitHub/demo candidates, source read, line anchors
-            ├── community-reception.md   17 candidates with community reception and tech feedback
-            ├── showcase/                visual gallery: index.html + img/ screenshots of every candidate
-            └── evidence/
+            ├── winners-a.md, winners-b-geo.md   source reads of 19 projects
+            ├── live-account-check.md       live trial check: roles, AI, ST_AZIMUTH range, Overture query
+            └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (not run)
 ```
 
 ## Folder roles
