@@ -1,7 +1,7 @@
 # Result: front-end design and tech for the compass element
 
 Date: 2026-11-21. Project: KCL First Year Hackathon, Track 2 "Retro Remix" (repo `Dust-OP/first-year-hack`, folder `new-project/`).
-Status: **research complete, nothing adopted yet**. The team has not chosen a visual style or a stack.
+Status: **approved by the project owner on 2026-11-21.** The technical recommendation (points 1–4 below) is adopted in demo v1 (`app/public/compass.js`, `app/public/heading.js`). The visual style is a separate decision: see Adoption state.
 
 ## Recommendation
 
@@ -59,4 +59,6 @@ The full per-candidate data (URLs, stars, license, commit, line anchors, quotes)
 
 ## Adoption state
 
-Candidates have been reviewed; nothing has been runtime-tested in the team's app. Next step: choose a style direction, then prototype the SVG dial with the gyro pattern, test on one iPhone and one Android phone over HTTPS, and record the result.
+- **2026-11-21, approved by the project owner.** Adopted in demo v1 (`app/`, commit `8225e57`): SVG dial rotated with a CSS transform, DeviceOrientation heading with the iOS permission prompt, and a no-sensor drag-to-turn demo mode.
+- **Visual style:** on 2026-11-21 the owner chose to replace the brass-and-paper look of demo v1 with Apple-style liquid/frosted glass with the Apple system colours and fade transitions for each action. That style choice is the owner's direction, not a recommendation from this research.
+- **Still unverified:** nothing has run on a real phone. Next check: open `app/` over HTTPS on one iPhone and one Android phone, outdoors, and record what the heading does.

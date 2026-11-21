@@ -31,4 +31,4 @@ Date: 21 Nov 2026 (event day; submissions 18:00). Owner chose Track 2 Retro Remi
 Reddit, Kickstarter comments, Bilibili, Hackster blocked; X not searched (no login). No organiser confirmation of rules.
 
 ## Status
-Research only; no concept adopted. Next: team picks concept; organiser rule check.
+Approved by the project owner on 2026-11-21. Concept chosen the same day: a compass that points at nearby people worth working with (built as demo v1 in `app/`). Still open: the organiser rule check on track and prize stacking (question text in rules-snowflake.md).

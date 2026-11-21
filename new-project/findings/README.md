@@ -1,7 +1,7 @@
 # Findings
 
 All research findings and evidence for this project live here: one folder per research question.
-Nothing in this folder is product code, and nothing here has been adopted until the team decides.
+Nothing in this folder is product code. Each entry file records its own adoption state and approval date.
 
 | Folder | Question | Start with |
 |---|---|---|
