@@ -9,6 +9,7 @@ Nothing in this folder is product code. Each entry file records its own adoption
 | [`compass-frontend-design/`](compass-frontend-design/) | Which front-end designs and tech should the compass dial use? (41 candidates from GitHub, Hacker News and design communities) | [`RESULT.md`](compass-frontend-design/RESULT.md) |
 | [`snowflake-real-projects/`](snowflake-real-projects/) | What does Snowflake actually do in real hackathon projects (source read, 19 projects), which roles do they set up, and what should our app's role/setup be? | [`RESULT.md`](snowflake-real-projects/RESULT.md) |
 | [`linkedin-integration/`](linkedin-integration/) | What does Sign In with LinkedIn return (and not return), how must the sign-in be built, and what do LinkedIn's API terms allow us to store? | [`RESULT.md`](linkedin-integration/RESULT.md) |
+| [`quant-sponsor-winners/`](quant-sponsor-winners/) | What do quant firms (HRT, Jane Street, Citadel, Optiver, QRT, Marshall Wace…) and data companies reward at hackathons, what did ~79 winners do with data, and what can our app do with its Snowflake data? | [`RESULT.md`](quant-sponsor-winners/RESULT.md) |
 
 ## Layout of a findings folder
 
