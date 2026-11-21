@@ -1,6 +1,7 @@
 // Minimal Snowflake SQL API v2 client: fetch + node:crypto, no driver.
 // Auth is a key-pair JWT (service user) or a programmatic access token.
-// Run against the team's account on 21 Nov 2026; re-check with `npm run snowflake:check`.
+// Run against the team's account on 21 Nov 2026 with key-pair auth (the access-token path is untested);
+// re-check with `npm run snowflake:check`.
 // API reference: https://docs.snowflake.com/en/developer-guide/sql-api/index
 
 import { createHash, createPrivateKey, createPublicKey, createSign } from 'node:crypto';
