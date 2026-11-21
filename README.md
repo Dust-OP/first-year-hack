@@ -23,6 +23,7 @@ Our mission is simple:
 
 **Find your direction. Connect with the right people. Rise together.**
 
+
 **🎯 The Problem**
 
 Finding the right person for guidance or collaboration can be surprisingly difficult.
@@ -31,6 +32,7 @@ Students, entrepreneurs, and aspiring professionals may struggle to identify rel
 Traditional networking can be overwhelming, fragmented, and time-consuming.
 
 We believe finding the right connection should feel as intuitive as following a compass.
+
 
 **💡 Our Solution**
 
@@ -43,6 +45,7 @@ The project aims to help users:
 - Navigate their journey toward personal and professional growth.
   
 Rather than focusing only on destinations, WAYRISE focuses on the people who help us reach them.
+
 
 **🎨 Design Concept**
 
@@ -59,6 +62,7 @@ Our design combines the timeless symbolism of the traditional compass with a mod
 **Human Connections:** Transform the concept of navigation from finding geographical destinations into discovering meaningful relationships.
 
 The result is a design philosophy rooted in the past but focused on the future.
+
 
 **🚀 Our Vision**
 
