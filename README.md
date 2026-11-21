@@ -14,7 +14,7 @@ Deploy to Vercel only when explicitly requested or when needed to show a live re
 Discover the journey from ancient navifation to the future of human connection.
 [watch WAYRISE - Official Promotional Video](https://github.com/Dust-OP/first-year-hack/releases/tag/v1.0.0)
 
-**WAYRISE - Find Your Way. Rise Together.
+**WAYRISE - Find Your Way. Rise Together.**
 
 ## Team Members
 - [Tianyi Wang](https://github.com/Dust-OP)
