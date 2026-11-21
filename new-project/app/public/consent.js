@@ -39,20 +39,26 @@
         <h2 id="consent-declined-title">No problem</h2>
         <p>Career Compass only works by showing your profile, and the direction and distance to you,
            to people within 500 m. Without that there is nothing for the needle to point at,
-           so the app stays closed. Nothing about you has been stored.</p>
+           so the app stays closed. ${localStorage.getItem('cc.token')
+             ? 'The compass has stopped and your position has been removed. Your profile and invitations stay stored until the team deletes them.'
+             : 'Nothing about you has been sent to our server. A cookie on this device remembers this choice.'}</p>
         <p><a href="privacy.html">Read what the app stores and why</a></p>
         <button type="button" class="consent-declined__retry">Change my mind</button>
       </div>`;
-    notice.querySelector('button').addEventListener('click', () => {
-      notice.remove();
-      notice = null;
-      CC.showPreferences();
-    });
+    notice.querySelector('button').addEventListener('click', () => CC.showPreferences());
     document.body.append(notice);
+    lockPage(true);
+    notice.querySelector('button').focus();
+  }
+
+  // The page behind the notice must not be reachable by keyboard or screen reader either.
+  function lockPage(on) {
+    for (const el of document.body.children) if (el !== notice && el.id !== 'cc-main') el.inert = on;
   }
 
   function check() {
     if (CC.acceptedCategory('nearby')) {
+      lockPage(false);
       notice?.remove();
       notice = null;
     } else if (CC.validConsent() && !onPrivacyPage) {
@@ -77,7 +83,13 @@
     },
     onFirstConsent: check,
     onConsent: check,
-    onChange: check,
+    onChange: () => {
+      const token = localStorage.getItem('cc.token');
+      if (CC.acceptedCategory('nearby') || !token) return check();
+      fetch('/api/hide', { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${token}` } })
+        .catch(() => {})
+        .finally(() => (onPrivacyPage ? check() : location.reload())); // reload stops app.js's 3 s position upload
+    },
     language: {
       default: 'en',
       translations: {
@@ -118,7 +130,7 @@
                 description:
                   'Your profile, and the direction and distance to you, are shown to people within 500 m who have the app open. ' +
                   'Your latest position is stored in Snowflake (London region) and replaced each time it updates; ' +
-                  '“Go invisible”, signing out or closing the page removes it. The compass needs this to work.',
+                  '“Go invisible” removes it; signing out or closing the page asks the server to remove it. The compass needs this to work.',
                 linkedCategory: 'nearby',
               },
               {

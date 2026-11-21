@@ -31,21 +31,22 @@
 
   <h2>What other people see</h2>
   <ul>
-    <li>Only people within <b>500 m</b> who also have the app open, and only while you are visible.</li>
+    <li>On the compass: only signed-in people whose app reports a position within <b>500 m</b> of yours, and only while you are visible.</li>
+    <li>In the People tab: anyone you have invited, or who has invited you, keeps your name, what you do, your LinkedIn link and your tags in their list. That does not depend on distance, and it stays after you go invisible, sign out or decline.</li>
     <li>Your name, what you do, your LinkedIn link, and what you offer and are looking for.</li>
-    <li>A <b>direction and a distance</b> to you. Your coordinates never leave the server, so nobody sees you on a map.</li>
-    <li>If you sign in with email, your email address is <b>never</b> shown to other users.</li>
+    <li>A <b>direction and a distance</b> to you, measured from the position their app reports. The app never sends your coordinates to another user and shows no map, but a direction and a distance from a known spot are enough to work out where you are to within GPS accuracy, and the app does not check that the other person is really where their app says.</li>
+    <li>If you sign in with email, your email address is <b>never</b> shown to other users. The name box is pre-filled with the part of your address before the @; change it if you do not want others to see that.</li>
   </ul>
 
   <h2>What is stored, where and for how long</h2>
   <div class="card">
     <table>
       <tr><th>What</th><th>Where</th><th>How long</th></tr>
-      <tr><td>Profile: name, what you do, LinkedIn link, what you offer and seek</td><td>The app's database in Snowflake, London (UK South) region</td><td>Until it is deleted. A “Delete my account” button is being added. Until then, ask the team at the event to delete it.</td></tr>
-      <tr><td>Your latest position and its accuracy</td><td>Snowflake, London region. One row per person: each update replaces the last, so no history is kept</td><td>Stops counting after 45 seconds. “Go invisible”, signing out or closing the page removes it at once</td></tr>
+      <tr><td>Profile: name, what you do, LinkedIn link, what you offer and seek</td><td>The app's database in Snowflake, London (UK South) region</td><td>Until it is deleted. To have your account and invitations deleted, ask the team.</td></tr>
+      <tr><td>Your latest position and its accuracy</td><td>Snowflake, London region. One row per person: each update replaces the last, so the app keeps no history. Snowflake itself can restore replaced or deleted rows for a short period (Time Travel, 1 day by default, then 7 days of Fail-safe).</td><td>Shown to others for at most 45 seconds after your last update. “Go invisible” deletes it. Signing out or closing the page asks the server to delete it, but that request can be lost (no signal, or the phone closes the browser); the last position then stays in the database, not shown to anyone, until you next start the compass or your account is deleted.</td></tr>
       <tr><td>Invitations you send or receive, and whether they were accepted</td><td>Snowflake, London region</td><td>Until your account is deleted</td></tr>
-      <tr><td>A hash of your session token (not the token itself)</td><td>Snowflake, London region</td><td>Until you sign out or your account is deleted</td></tr>
-      <tr><td>If you sign in with email: your sign-in ID and email address</td><td>Snowflake, London region, and the team's sign-in service (Logto), which sends the one-time code</td><td>Until your account is deleted</td></tr>
+      <tr><td>A hash of your session token (not the token itself)</td><td>Snowflake, London region</td><td>Until your account is deleted. Signing out removes the token from your device only; the hash stays on the server and the token keeps working until you sign in again with email, which replaces it.</td></tr>
+      <tr><td>If you sign in with email: your sign-in ID and email address</td><td>Snowflake, London region, and the team's own sign-in server (Logto, at auth.dustpowered.studio), which emails the one-time code. That server is shared with the team's other project, Cila, so your email becomes a sign-in account there as well.</td><td>Until the team deletes it in both places.</td></tr>
     </table>
   </div>
   <p class="note">If the app runs without Snowflake (for example in an offline demo), the same data is kept only in the server's memory and disappears when it restarts.</p>
@@ -55,23 +56,24 @@
     <table>
       <tr><th>Name</th><th>Type</th><th>Purpose</th></tr>
       <tr><td><code>cc.token</code></td><td>Local storage</td><td>Random session token that keeps you signed in. Removed when you sign out.</td></tr>
-      <tr><td><code>cc_consent</code></td><td>Cookie, 6 months</td><td>Remembers your choice in the “Before you start” dialog.</td></tr>
+      <tr><td><code>cc_consent</code></td><td>Cookie, up to 6 months (Safari may shorten this to 7 days)</td><td>Remembers your choice in the “Before you start” dialog, including “No thanks”. It holds the choice, a random ID and the time you chose.</td></tr>
       <tr><td>Sign-in check values</td><td>Session storage</td><td>Only during email sign-in. Deleted as soon as you come back from the sign-in page.</td></tr>
+      <tr><td>Sign-in session cookies</td><td>Cookies set by the sign-in server on its own address</td><td>Only if you sign in with email. They keep you signed in there until you sign out.</td></tr>
     </table>
   </div>
   <p>There are no adverts, analytics or tracking cookies.</p>
 
   <h2>Why we use it</h2>
-  <p>Only to point your compass at people nearby and let you invite them. We ask for your agreement before you start, and you can change your mind at any time. Your phone also asks you separately before it shares your location or motion sensors.</p>
+  <p>Only to point your compass at people nearby and let you invite them. We ask for your agreement before you start, and you can change your mind at any time. Your phone asks you separately before it shares your location; an iPhone also asks before sharing its motion sensors.</p>
 
   <h2>Demo people</h2>
   <p>During demos the app can place made-up “demo people” around you. They are not real users and are marked as demo data in the database.</p>
 
   <h2>Your choices</h2>
   <ul>
-    <li>Go invisible, or sign out, at any time.</li>
+    <li>Go invisible, or sign out, at any time: both buttons are under “Demo tools and what runs underneath” on the compass screen. Refusing location access does not hide you: the app then uses a fixed demo position (Bush House) and still shows your profile to people near it.</li>
     <li>Change your agreement: <button type="button" id="change-consent">Change my choice</button></li>
-    <li>Ask the team to delete your account and invitations. A button for this is being added.</li>
+    <li>Ask the team to delete your account and invitations.</li>
   </ul>
   <p class="note">Last updated 21 November 2026.</p>
 </main>
