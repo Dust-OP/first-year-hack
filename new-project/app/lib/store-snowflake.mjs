@@ -9,6 +9,8 @@ const bool = (v) => v === true || v === 'true' || v === '1';
 
 const toUser = (r) => ({
   id: r.ID,
+  sub: r.LOGTO_SUB ?? null,
+  email: r.EMAIL ?? null,
   name: r.NAME,
   headline: r.HEADLINE,
   linkedin: r.LINKEDIN_URL,
@@ -25,7 +27,7 @@ const toRequest = (r) => ({
   respondedMs: num(r.RESPONDED_MS),
 });
 
-const USER_COLS = 'ID, NAME, HEADLINE, LINKEDIN_URL, OFFERS, SEEKS, IS_DEMO';
+const USER_COLS = 'ID, LOGTO_SUB, EMAIL, NAME, HEADLINE, LINKEDIN_URL, OFFERS, SEEKS, IS_DEMO';
 
 export const NEARBY_SQL = `
 SELECT u.ID, u.NAME, u.HEADLINE, u.LINKEDIN_URL, u.OFFERS, u.SEEKS, u.IS_DEMO,
@@ -52,15 +54,28 @@ export function createSnowflakeStore(client) {
 
     async createUser(u) {
       await q(
-        `INSERT INTO USERS (ID, TOKEN_HASH, NAME, HEADLINE, LINKEDIN_URL, OFFERS, SEEKS, IS_DEMO, CREATED_MS)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [u.id, u.tokenHash, u.name, u.headline, u.linkedin, JSON.stringify(u.offers), JSON.stringify(u.seeks), Boolean(u.demo), Date.now()],
+        `INSERT INTO USERS (ID, LOGTO_SUB, EMAIL, TOKEN_HASH, NAME, HEADLINE, LINKEDIN_URL, OFFERS, SEEKS, IS_DEMO, CREATED_MS)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [u.id, u.sub ?? null, u.email ?? null, u.tokenHash, u.name, u.headline, u.linkedin, JSON.stringify(u.offers), JSON.stringify(u.seeks), Boolean(u.demo), Date.now()],
       );
       return u;
     },
     async getUserByTokenHash(hash) {
       const rows = await q(`SELECT ${USER_COLS} FROM USERS WHERE TOKEN_HASH = ? LIMIT 1`, [hash]);
       return rows[0] ? toUser(rows[0]) : null;
+    },
+    async getUserBySub(sub) {
+      const rows = await q(`SELECT ${USER_COLS} FROM USERS WHERE LOGTO_SUB = ? LIMIT 1`, [sub]);
+      return rows[0] ? toUser(rows[0]) : null;
+    },
+    async setUserToken(id, tokenHash) {
+      await q(`UPDATE USERS SET TOKEN_HASH = ? WHERE ID = ?`, [tokenHash, id]);
+    },
+    async updateUser(id, p) {
+      await q(`UPDATE USERS SET NAME = ?, HEADLINE = ?, LINKEDIN_URL = ?, OFFERS = ?, SEEKS = ? WHERE ID = ?`, [
+        p.name, p.headline, p.linkedin, JSON.stringify(p.offers), JSON.stringify(p.seeks), id,
+      ]);
+      return (await this.getUsers([id]))[0] ?? null;
     },
     async getUsers(ids) {
       if (!ids.length) return [];

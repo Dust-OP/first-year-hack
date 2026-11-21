@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApi } from './lib/api.mjs';
+import { createIdTokenVerifier, logtoConfigFromEnv } from './lib/logto.mjs';
 import { createMemoryStore } from './lib/store-memory.mjs';
 import { createSnowflakeClient, snowflakeConfigFromEnv } from './lib/snowflake.mjs';
 import { createSnowflakeStore } from './lib/store-snowflake.mjs';
@@ -21,10 +22,12 @@ const TYPES = {
 
 const sf = snowflakeConfigFromEnv();
 const store = sf ? createSnowflakeStore(createSnowflakeClient(sf)) : createMemoryStore();
-const api = createApi({ store, demo: process.env.DEMO !== '0' });
+const logto = logtoConfigFromEnv();
+const api = createApi({ store, demo: process.env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto) });
 
 async function serveStatic(pathname, res) {
-  const rel = normalize(decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
+  // /callback is where Logto sends the browser back after sign-in; the page itself finishes the job.
+  const rel = normalize(decodeURIComponent(pathname === '/' || pathname === '/callback' ? '/index.html' : pathname));
   const file = join(PUBLIC, rel);
   if (file !== PUBLIC && !file.startsWith(PUBLIC + sep)) return false;
   try {
@@ -53,4 +56,5 @@ const server = createServer(async (req, res) => {
 });
 
 const port = Number(process.env.PORT) || 3000;
-server.listen(port, () => console.log(`Career Compass on http://localhost:${port}  (store: ${store.kind})`));
+server.listen(port, () =>
+  console.log(`Career Compass on http://localhost:${port}  (store: ${store.kind}, sign-in: ${logto ? `Logto at ${logto.endpoint}` : 'quick sign-up only'})`));

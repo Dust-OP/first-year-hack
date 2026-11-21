@@ -1,5 +1,6 @@
 // Career Compass, demo v1: wires sign-up, location, heading, the dial and the inbox together.
 
+import { createLogto } from './auth.js';
 import { createCompass } from './compass.js';
 import { angleDiff, createHeading } from './heading.js';
 
@@ -26,6 +27,7 @@ const state = {
   token: localStorage.getItem('cc.token'),
   me: null,
   demo: false,
+  logto: null, // email sign-in, when the server has it configured
   running: false,
   visible: true,
   position: null, // { lat, lon, accuracy, demo? }
@@ -53,10 +55,10 @@ async function api(method, path, body) {
 // ---------- views ----------
 
 function show(view) {
-  for (const v of ['signup', 'compass', 'people']) $(`view-${v}`).hidden = v !== view;
+  for (const v of ['welcome', 'signup', 'compass', 'people']) $(`view-${v}`).hidden = v !== view;
   $('tab-compass').classList.toggle('is-on', view === 'compass');
   $('tab-people').classList.toggle('is-on', view === 'people');
-  document.querySelector('.bar nav').hidden = view === 'signup';
+  document.querySelector('.bar nav').hidden = view === 'signup' || view === 'welcome';
 }
 $('tab-compass').addEventListener('click', () => show('compass'));
 $('tab-people').addEventListener('click', () => show('people'));
@@ -75,13 +77,19 @@ $('signup').addEventListener('submit', async (e) => {
   const err = $('signup-error');
   err.hidden = true;
   try {
-    const out = await api('POST', '/api/signup', {
+    const fields = {
       name: f.get('name'), headline: f.get('headline'), linkedin: f.get('linkedin'),
       offers: f.getAll('offers'), seeks: f.getAll('seeks'),
-    });
-    state.token = out.token;
-    state.me = out.me;
-    localStorage.setItem('cc.token', out.token);
+    };
+    if (state.me) {
+      // Signed in with email already: this form completes the profile.
+      state.me = (await api('POST', '/api/profile', fields)).me;
+    } else {
+      const out = await api('POST', '/api/signup', fields);
+      state.token = out.token;
+      state.me = out.me;
+      localStorage.setItem('cc.token', out.token);
+    }
     show('compass');
   } catch (ex) {
     err.textContent = ex.message;
@@ -339,8 +347,11 @@ $('hide').addEventListener('click', async () => {
 
 function signOut() {
   if (state.token) fetch('/api/hide', { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${state.token}` } }).catch(() => {});
+  const viaEmail = Boolean(state.logto && state.me?.email);
   localStorage.removeItem('cc.token');
-  location.reload();
+  // Signed in with email: end the Logto session too, or the next tap on "Sign in" would silently reuse it.
+  if (viaEmail) location.assign(state.logto.signOutUrl());
+  else location.reload();
 }
 $('signout').addEventListener('click', signOut);
 
@@ -351,18 +362,49 @@ window.addEventListener('pagehide', () => {
 
 // ---------- boot ----------
 
+/** After signing in with email for the first time there is no profile yet: ask for it. */
+function enter() {
+  if (!state.me.needsProfile) return show('compass');
+  $('signup-lede').textContent = 'You are signed in. Tell people who you are, so the compass has something to show them.';
+  $('signup-submit').textContent = 'Save my profile';
+  $('signup').elements.name.value = state.me.name ?? '';
+  show('signup');
+}
+
+$('signin').addEventListener('click', () => { $('signin').disabled = true; state.logto.signIn(); });
+$('quick').addEventListener('click', () => show('signup'));
+
 (async function boot() {
-  try { state.demo = (await api('GET', '/api/health')).demo; } catch { /* offline: sign-up will report it */ }
+  let health = {};
+  try { health = await api('GET', '/api/health'); } catch { /* offline: sign-up will report it */ }
+  state.demo = Boolean(health.demo);
+  state.logto = health.auth ? createLogto(health.auth) : null;
   $('seed').hidden = !state.demo;
+  $('quick').hidden = !health.quickSignup;
   renderEngine();
+
+  // Coming back from Logto: swap the one-time code for a session with our server.
+  if (state.logto?.returning) {
+    try {
+      const out = await api('POST', '/api/session', { idToken: await state.logto.finishSignIn() });
+      state.token = out.token;
+      state.me = out.me;
+      localStorage.setItem('cc.token', out.token);
+      return enter();
+    } catch (ex) {
+      $('welcome-error').textContent = ex.message;
+      $('welcome-error').hidden = false;
+      return show('welcome');
+    }
+  }
   if (state.token) {
     try {
       state.me = (await api('GET', '/api/me')).me;
-      return show('compass');
+      return enter();
     } catch {
       localStorage.removeItem('cc.token');
       state.token = null;
     }
   }
-  show('signup');
+  show(state.logto ? 'welcome' : 'signup');
 })();

@@ -28,10 +28,12 @@ USE SCHEMA COMPASS_DB.APP;
 -- Times are epoch milliseconds so the app reads them without parsing.
 CREATE TABLE IF NOT EXISTS USERS (
   ID            STRING NOT NULL,
+  LOGTO_SUB     STRING,            -- Logto user id; NULL for quick sign-ups and demo bots
+  EMAIL         STRING,            -- verified by Logto; never shown to other users
   TOKEN_HASH    STRING,            -- SHA-256 of the session token; the token itself is never stored
   NAME          STRING NOT NULL,
   HEADLINE      STRING,
-  LINKEDIN_URL  STRING NOT NULL,
+  LINKEDIN_URL  STRING,            -- NULL until the profile is completed
   OFFERS        STRING,            -- JSON array of tags
   SEEKS         STRING,            -- JSON array of tags
   IS_DEMO       BOOLEAN DEFAULT FALSE,
@@ -58,7 +60,7 @@ CREATE TABLE IF NOT EXISTS REQUESTS (
 GRANT USAGE ON WAREHOUSE COMPASS_WH     TO ROLE COMPASS_APP_ROLE;
 GRANT USAGE ON DATABASE  COMPASS_DB     TO ROLE COMPASS_APP_ROLE;
 GRANT USAGE ON SCHEMA    COMPASS_DB.APP TO ROLE COMPASS_APP_ROLE;
-GRANT SELECT, INSERT                 ON TABLE USERS     TO ROLE COMPASS_APP_ROLE;
+GRANT SELECT, INSERT, UPDATE         ON TABLE USERS     TO ROLE COMPASS_APP_ROLE;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE LOCATIONS TO ROLE COMPASS_APP_ROLE;
 GRANT SELECT, INSERT, UPDATE         ON TABLE REQUESTS  TO ROLE COMPASS_APP_ROLE;
 

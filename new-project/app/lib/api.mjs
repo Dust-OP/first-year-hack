@@ -27,9 +27,22 @@ export function normLinkedin(input) {
   return m ? `https://www.linkedin.com/in/${encodeURIComponent(decodeURIComponent(m[1]))}` : null;
 }
 
+/** What other people may see. */
 const profile = (u) => ({
   id: u.id, name: u.name, headline: u.headline, linkedin: u.linkedin, offers: u.offers, seeks: u.seeks, demo: Boolean(u.demo),
 });
+/** What you may see about yourself. Email never goes to anyone else. */
+const self = (u) => ({ ...profile(u), email: u.email ?? null, needsProfile: !u.linkedin });
+const newToken = () => randomBytes(24).toString('base64url');
+
+/** Validates the profile form. Returns { error } or the cleaned fields. */
+function readProfile(b) {
+  const name = clean(b.name, 60);
+  const linkedin = normLinkedin(b.linkedin);
+  if (name.length < 2) return { error: 'Please enter your name.' };
+  if (!linkedin) return { error: 'Please enter your LinkedIn profile, e.g. linkedin.com/in/your-name.' };
+  return { name, headline: clean(b.headline, 100), linkedin, offers: normTags(b.offers), seeks: normTags(b.seeks) };
+}
 
 const DEMO_PEOPLE = [
   ['Amara Okafor', 'Product designer, fintech', ['design', 'figma', 'user research'], ['frontend', 'co-founder']],
@@ -39,7 +52,14 @@ const DEMO_PEOPLE = [
   ['Idris Bello', 'Frontend engineer, maps', ['frontend', 'react', 'maps'], ['design', 'mentor']],
 ];
 
-export function createApi({ store, demo = false, now = () => Date.now() }) {
+/**
+ * @param logto          { endpoint, appId } when email sign-in is configured, else null
+ * @param verifyIdToken  from lib/logto.mjs; required when `logto` is set
+ */
+export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null }) {
+  // The quick sign-up has no email check. Once real sign-in is on, keep it only for demos.
+  const quickSignup = !logto || demo;
+
   async function auth(request) {
     const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
     return token ? store.getUserByTokenHash(sha(token)) : null;
@@ -98,25 +118,55 @@ export function createApi({ store, demo = false, now = () => Date.now() }) {
   }
 
   const routes = {
-    'GET /api/health': async () => json({ ok: true, store: store.kind, demo }),
+    'GET /api/health': async () =>
+      json({ ok: true, store: store.kind, demo, quickSignup, auth: logto ? { endpoint: logto.endpoint, appId: logto.appId } : null }),
 
     'POST /api/signup': async (request) => {
-      const b = await readBody(request);
-      const name = clean(b.name, 60);
-      const linkedin = normLinkedin(b.linkedin);
-      if (name.length < 2) return fail(400, 'Please enter your name.');
-      if (!linkedin) return fail(400, 'Please enter your LinkedIn profile, e.g. linkedin.com/in/your-name.');
-      const token = randomBytes(24).toString('base64url');
-      const user = await store.createUser({
-        id: randomUUID(), tokenHash: sha(token), name, headline: clean(b.headline, 100), linkedin,
-        offers: normTags(b.offers), seeks: normTags(b.seeks), demo: false,
-      });
-      return json({ token, me: profile(user) });
+      if (!quickSignup) return fail(403, 'Please sign in with your email.');
+      const p = readProfile(await readBody(request));
+      if (p.error) return fail(400, p.error);
+      const token = newToken();
+      const user = await store.createUser({ id: randomUUID(), sub: null, email: null, tokenHash: sha(token), ...p, demo: false });
+      return json({ token, me: self(user) });
+    },
+
+    // Email sign-in: the browser signed in at Logto and brings us the ID token once.
+    'POST /api/session': async (request) => {
+      if (!verifyIdToken) return fail(404, 'Email sign-in is not set up on this server.');
+      const { idToken } = await readBody(request);
+      let claims;
+      try {
+        claims = await verifyIdToken(idToken);
+      } catch (err) {
+        return fail(401, `Sign-in could not be verified (${err.message}).`);
+      }
+      const token = newToken();
+      let user = await store.getUserBySub(claims.sub);
+      if (user) {
+        await store.setUserToken(user.id, sha(token));
+      } else {
+        // First visit: an account with no profile yet. It stays off every compass until the profile is filled in.
+        const email = clean(claims.email, 200) || null;
+        user = await store.createUser({
+          id: randomUUID(), sub: claims.sub, email, tokenHash: sha(token),
+          name: clean(claims.name || claims.username || (email ?? '').split('@')[0], 60),
+          headline: '', linkedin: null, offers: [], seeks: [], demo: false,
+        });
+      }
+      return json({ token, me: self(user) });
+    },
+
+    'POST /api/profile': async (request) => {
+      const me = await auth(request);
+      if (!me) return fail(401, 'Not signed in.');
+      const p = readProfile(await readBody(request));
+      if (p.error) return fail(400, p.error);
+      return json({ me: self(await store.updateUser(me.id, p)) });
     },
 
     'GET /api/me': async (request) => {
       const me = await auth(request);
-      return me ? json({ me: profile(me) }) : fail(401, 'Not signed in.');
+      return me ? json({ me: self(me) }) : fail(401, 'Not signed in.');
     },
 
     // One call per tick: report my position, get back who is around and my inbox.
@@ -125,7 +175,8 @@ export function createApi({ store, demo = false, now = () => Date.now() }) {
       if (!me) return fail(401, 'Not signed in.');
       const b = await readBody(request);
       const lat = Number(b.lat), lon = Number(b.lon);
-      const located = b.lat != null && b.lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+      // No profile yet = nothing for others to see, so that person is not placed on the map.
+      const located = Boolean(me.linkedin) && b.lat != null && b.lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
       const accuracy = Math.min(Math.max(Number(b.accuracy) || 0, 0), 5000);
 
       if (located) await store.setLocation(me.id, { lat, lon, accuracy, updatedMs: now() });
@@ -195,7 +246,7 @@ export function createApi({ store, demo = false, now = () => Date.now() }) {
       const made = [];
       for (const [i, [name, headline, offers, seeks]] of DEMO_PEOPLE.entries()) {
         const bot = await store.createUser({
-          id: randomUUID(), tokenHash: null, name, headline, offers, seeks, demo: true,
+          id: randomUUID(), sub: null, email: null, tokenHash: null, name, headline, offers, seeks, demo: true,
           linkedin: 'https://www.linkedin.com/in/demo-' + name.toLowerCase().replace(/\s+/g, '-'),
         });
         await store.setLocation(bot.id, { ...offset(at, 20 + i * 72, 60 + i * 55), accuracy: 5, updatedMs: FOREVER });

@@ -21,7 +21,7 @@ main { max-width: 460px; margin: 0 auto; padding: 4px 16px calc(28px + env(safe-
 .fine { color: var(--muted); font-size: .8rem; line-height: 1.45; }
 .error { color: #ffb4ab; margin: 0; }
 
-form { display: grid; gap: 14px; }
+form, .stack { display: grid; gap: 14px; }
 label { display: grid; gap: 6px; font-size: .9rem; color: var(--muted); }
 input { font: inherit; font-size: 1rem; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink-2); color: var(--paper); }
 input:focus-visible, button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }

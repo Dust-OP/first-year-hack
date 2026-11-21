@@ -6,7 +6,7 @@ Built 21 Nov 2026. No dependencies: Node 20+ only.
 
 ## The flow
 
-1. **Sign up** with your name, what you do, your LinkedIn profile, what you offer and what you are looking for.
+1. **Sign in with email** (a one-time code sent by Logto), then fill in your profile: name, what you do, your LinkedIn profile, what you offer and what you are looking for. Without Logto configured, a quick sign-up with no email check takes its place.
 2. **Start compass.** The phone asks for location and motion access.
 3. The dial shows everyone within 500 m who has the app open. The **red needle** points at your best match (tap anyone else to follow them instead).
 4. **Turn until the needle points up.** When you face someone (within 15°), their card pops up: who they are, why they match, their LinkedIn link.
@@ -18,7 +18,7 @@ Built 21 Nov 2026. No dependencies: Node 20+ only.
 ```sh
 cd new-project/app
 npm start          # http://localhost:3000
-npm test           # 5 tests: bearings, LinkedIn URL check, invite/accept/decline, demo bots
+npm test           # 8 tests: bearings, LinkedIn URL check, invite/accept/decline, demo bots, email sign-in
 ```
 
 On a laptop there is no compass sensor, so the app switches to **drag the dial to turn** (or the left/right arrow keys). Open *Demo tools* and tap **Add demo people** to place five bots around you; one of them invites you, and any bot you invite accepts after a few seconds. That shows the whole flow on one device.
@@ -39,9 +39,29 @@ cloudflared tunnel --url http://localhost:3000
 | Part | State on 21 Nov |
 |---|---|
 | Sign-up, nearby people, bearing and distance, invite, accept, decline, LinkedIn link | Works. Checked in a real browser with two simulated phones 120 m apart, and by `npm test` |
+| Email sign-in through Logto | Written and checked in a browser against a **local stand-in** for Logto (`npm run mock-signin`). **Not yet run against the real Logto**: that needs the App ID |
 | Compass heading from the phone sensor | Written, **not yet run on a phone**. The headless test browser has no sensor, so only the drag-to-turn path was exercised |
 | Snowflake as the database | Written, **not yet run**: there was no Snowflake account on the build machine. The app uses an in-memory store until `.env` is filled in |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
+
+### Sign-in (Logto)
+
+Sign-in uses the team's existing self-hosted Logto at `auth.dustpowered.studio`, the same one the Cila client uses. Logto emails the one-time code from the existing `dustpowered.studio` sender, so there is no email setup in this app.
+
+To switch it on:
+
+1. In the Logto console create an application of type **Single Page App**.
+2. Add the redirect URI `<app address>/callback` and the post sign-out redirect URI `<app address>`. For laptop testing the app address is `http://localhost:3000`. Every address the app is opened from must be added, including the HTTPS one for phones.
+3. Put the App ID in `.env` as `LOGTO_APP_ID` (it is not a secret) and restart.
+
+How it works: the browser goes to Logto and comes back to `/callback` with a one-time code (`public/auth.js`, OpenID Connect with PKCE, no SDK). It swaps the code for an ID token and posts that to `/api/session`. The server checks the token's signature against Logto's published keys (`lib/logto.mjs`) and issues the app's own session token. A first-time user has no profile yet and stays off every compass until they fill it in.
+
+Things to know:
+
+- Accounts are shared with Cila: someone who signs in here becomes a user in Cila's Logto, and the sign-in page carries Cila's branding.
+- Sign-in depends on that Logto server being up.
+- `DEMO=1` keeps a "Try the demo without an account" button next to email sign-in. Set `DEMO=0` to require email for everyone.
+- To try the flow with no Logto access: `npm run mock-signin` in one terminal, then `LOGTO_ENDPOINT=http://localhost:3299 LOGTO_APP_ID=mock-app npm start`. The stand-in accepts any email and sends nothing. It is for local testing only.
 
 ### LinkedIn
 
@@ -60,7 +80,7 @@ So the request and the accept/decline happen **inside our app**, and the last st
 - Another person's coordinates never leave the server. Clients get a bearing and a distance only.
 - Only the latest position is stored, and it stops counting after 45 seconds. *Go invisible*, signing out or closing the page removes it at once.
 - Someone who was declined cannot invite the same person again.
-- Sign-in is a random token kept on the device. There are no passwords, and the server stores only the token's hash.
+- The app keeps a random session token on the device and the server stores only its hash. There are no passwords. Your email address is never shown to other users.
 
 ## Snowflake
 
@@ -81,6 +101,8 @@ Each compass tick is two or three statements. Expect it to feel slower than the 
 |---|---|
 | `server.mjs` | Local server: static files plus the API |
 | `lib/api.mjs` | All API routes as one `(Request) => Response` function |
+| `lib/logto.mjs`, `public/auth.js` | Email sign-in: server-side ID token check, browser-side OpenID Connect flow |
+| `dev/mock-oidc.mjs` | Local stand-in for Logto, for tests and offline tries |
 | `lib/geo.mjs`, `lib/match.mjs` | Bearing and distance maths; the tag-overlap match score |
 | `lib/store-memory.mjs` | Default store |
 | `lib/snowflake.mjs`, `lib/store-snowflake.mjs` | Snowflake SQL API client (no driver) and store |
@@ -88,10 +110,11 @@ Each compass tick is two or three statements. Expect it to feel slower than the 
 | `public/compass.js` | **The dial.** Restyle or replace this file; keep `createCompass`, `setPeople` and `render` and nothing else needs to change |
 | `public/heading.js` | Phone heading: iOS permission, Android absolute orientation, manual fallback |
 | `public/app.js`, `index.html`, `style.css` | Screens, location, polling, the card and the inbox |
-| `test/api.test.mjs` | Tests |
+| `test/*.test.mjs` | Tests |
 
 ## Next
 
+1. Create the Logto application, set `LOGTO_APP_ID` and sign in once with a real email to confirm the code arrives.
 1. Try it on one iPhone and one Android phone over HTTPS, outdoors. Record what the heading does.
 2. Get a Snowflake account and run `npm run snowflake:check`.
 3. Drop in the designed dial from the front-end session.

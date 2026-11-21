@@ -16,9 +16,20 @@
     </nav>
   </header>
 
-  <!-- 1. Sign up -->
-  <main id="view-signup" hidden>
+  <!-- 0. Welcome: shown when email sign-in (Logto) is configured -->
+  <main id="view-welcome" hidden>
     <p class="lede">The compass used to point north. This one points at the person nearby you should be working with.</p>
+    <div class="stack">
+      <button id="signin" class="primary" type="button">Sign in with email</button>
+      <p class="fine">We email you a one-time code. There is no password to remember.</p>
+      <p id="welcome-error" class="error" role="alert" hidden></p>
+      <button id="quick" class="ghost" type="button" hidden>Try the demo without an account</button>
+    </div>
+  </main>
+
+  <!-- 1. Profile: quick sign-up, or the first visit after signing in with email -->
+  <main id="view-signup" hidden>
+    <p id="signup-lede" class="lede">The compass used to point north. This one points at the person nearby you should be working with.</p>
     <form id="signup" novalidate>
       <label>Your name <input name="name" autocomplete="name" required maxlength="60"></label>
       <label>What you do <input name="headline" placeholder="CS first year, King's College London" maxlength="100"></label>
@@ -26,7 +37,7 @@
       <fieldset><legend>I can offer</legend><div class="chips" data-field="offers"></div></fieldset>
       <fieldset><legend>I am looking for</legend><div class="chips" data-field="seeks"></div></fieldset>
       <p id="signup-error" class="error" role="alert" hidden></p>
-      <button class="primary" type="submit">Create my profile</button>
+      <button id="signup-submit" class="primary" type="submit">Create my profile</button>
       <p class="fine">People within 500 m who also use this app can see your name, what you do and your LinkedIn link while you have the compass open. They see a direction and a distance, never your position on a map.</p>
     </form>
   </main>
