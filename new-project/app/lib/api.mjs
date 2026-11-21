@@ -196,20 +196,23 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       const expected = stateOf(request);
       if (q.get('error')) {
         // Anyone can write a link to this address with any `error_description`, and nothing has been
-        // checked yet. So that text goes to the log, and the page only ever shows our own sentences.
+        // checked yet. So that text goes to the log, and the page is told only which of its own
+        // sentences to show: /#linkedin_error= carries one of the short codes in LINKEDIN_ERRORS
+        // (public/auth.js), never a sentence.
         const cancelled = /^user_cancelled/.test(q.get('error'));
         if (!cancelled) console.error('[linkedin] callback error:', clean(q.get('error'), 60), clean(q.get('error_description'), 200));
-        return back('linkedin_error', cancelled ? 'You cancelled the LinkedIn sign-in.' : 'LinkedIn did not complete the sign-in. Please try again.');
+        return back('linkedin_error', cancelled ? 'cancelled' : 'failed');
       }
       // `state` proves this return belongs to the sign-in this browser started.
-      if (!expected || !q.get('code') || q.get('state') !== expected) return back('linkedin_error', 'Sign-in was interrupted. Please try again.');
+      if (!expected || !q.get('code') || q.get('state') !== expected) return back('linkedin_error', 'interrupted');
 
       let member;
       try {
         member = await linkedin.memberFor({ code: q.get('code'), redirectUri: `${origin}/api/linkedin/callback` });
       } catch (err) {
+        // The reason (LinkedIn's error name or status) stays in the log; the page gets a code.
         console.error('[linkedin]', err.message);
-        return back('linkedin_error', `${err.message}. Please try again.`);
+        return back('linkedin_error', /did not accept the sign-in/.test(err.message) ? 'refused' : /did not return a profile/.test(err.message) ? 'no_profile' : 'failed');
       }
       let user = await store.getUserBySub(LINKEDIN_SUB + member.sub);
       if (!user) {

@@ -104,6 +104,11 @@ if (!url) {
     console.log('Open it in Safari (iPhone) or Chrome (Android) itself, not inside another app, and allow location and motion.');
     if (process.env.LINKEDIN_CLIENT_ID && !process.env.LINKEDIN_MOCK_URL) console.log(`LinkedIn sign-in from this address needs this redirect URL in the LinkedIn app (Auth tab):\n  ${url}/api/linkedin/callback`);
     if (process.env.LOGTO_APP_ID) console.log(`Email sign-in from this address needs these in the Logto app: redirect URI ${url}/callback, post sign-out redirect URI ${url}`);
+    // Read here as the server reads them: this launcher loaded the same .env (top of this file) and
+    // hands its whole environment to the server it started, so both see the same values.
+    // The stand-in is only in use when both LinkedIn values are set too (lib/linkedin.mjs); otherwise there is no button.
+    if (process.env.LINKEDIN_MOCK_URL && process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) console.log('LINKEDIN_MOCK_URL is set: the LinkedIn stand-in only works in a browser on this laptop. Phones still show the button, but it sends them to their own "localhost". On phones use "Try the demo without an account".');
+    if (process.env.DEMO !== '0') console.log('Demo mode is on: anyone with this address can sign up without an account and add demo people to this server’s store. DEMO=0 turns that off.');
     console.log('The address is new every time this command runs. Ctrl-C stops the server and closes the tunnel.');
   }
 }

@@ -11,7 +11,7 @@ const HERE = { lat: 51.5131, lon: -0.1174, accuracy: 5 };
 const JPEG = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70]).toString('base64');
 
 /** Our API wired to the LinkedIn stand-in, in process: no ports, one adjustable clock. */
-function setup({ secret = 'mock-secret', localeAs = 'text', demo = false } = {}) {
+function setup({ secret = 'mock-secret', localeAs = 'text', demo = false, fetch = null } = {}) {
   const clock = { t: Date.parse('2026-11-21T14:00:00Z') };
   const mock = createMockLinkedin({ base: 'http://linkedin.mock.test', localeAs });
   const cfg = {
@@ -19,7 +19,8 @@ function setup({ secret = 'mock-secret', localeAs = 'text', demo = false } = {})
     authorizeUrl: `${mock.base}/oauth/v2/authorization`, tokenUrl: `${mock.base}/oauth/v2/accessToken`, userinfoUrl: `${mock.base}/v2/userinfo`,
   };
   const store = createMemoryStore();
-  const api = createApi({ store, demo, now: () => clock.t, linkedin: createLinkedin(cfg, { fetch: mock.fetch }) });
+  // `fetch(input, init, mock.fetch)` lets a test stand in the way of one call to LinkedIn.
+  const api = createApi({ store, demo, now: () => clock.t, linkedin: createLinkedin(cfg, { fetch: fetch ? (input, init) => fetch(input, init, mock.fetch) : mock.fetch }) });
   /** `cookie` is the browser's cookie jar: what `signIn()` below returns for the browser that did the sign-in. */
   const call = (token, cookie) => async (method, path, body) => {
     const res = await api(new Request(APP + path, {
@@ -114,31 +115,39 @@ test('LinkedIn sign-in is refused when it is cancelled, tampered with, replayed 
   const { api, signIn } = setup();
   const logged = [];
   t.mock.method(console, 'error', (...args) => logged.push(args.join(' ')));
-  assert.match((await signIn({ decision: 'cancel' })).error, /cancelled/);
+  // The page is only ever told which of its own sentences to show: a short code, never a sentence.
+  assert.equal((await signIn({ decision: 'cancel' })).error, 'cancelled');
   // Any other error on the return, whether LinkedIn reported it or someone wrote it into a link:
-  // the page is given our own sentence, and the text from the address only goes to the server log.
+  // the text from the address only goes to the server log.
   const planted = 'Your account is locked. Call 020 555 0100 to unlock it.';
   const reported = await api(new Request(`${APP}/api/linkedin/callback?error=access_denied&error_description=${encodeURIComponent(planted)}`));
-  assert.equal(reported.headers.get('location'), `${APP}/#linkedin_error=${encodeURIComponent('LinkedIn did not complete the sign-in. Please try again.')}`);
+  assert.equal(reported.headers.get('location'), `${APP}/#linkedin_error=failed`);
   assert.ok(logged.some((line) => line.includes('access_denied') && line.includes(planted)), 'what LinkedIn said is in the log');
   // A return that does not carry the state this browser was given (someone else's link).
-  assert.match((await signIn({ tamper: (u) => u.replace(/state=[^&]+/, 'state=forged') })).error, /interrupted/);
+  assert.equal((await signIn({ tamper: (u) => u.replace(/state=[^&]+/, 'state=forged') })).error, 'interrupted');
   // A return with no cookie at all, e.g. the callback link opened in another browser.
   const stray = await api(new Request(`${APP}/api/linkedin/callback?code=x&state=y`));
-  assert.match(decodeURIComponent(stray.headers.get('location')), /interrupted/);
+  assert.equal(stray.headers.get('location'), `${APP}/#linkedin_error=interrupted`);
   // A code LinkedIn never issued.
-  assert.match((await signIn({ tamper: (u) => u.replace(/code=[^&]+/, 'code=made-up') })).error, /did not accept/);
+  assert.equal((await signIn({ tamper: (u) => u.replace(/code=[^&]+/, 'code=made-up') })).error, 'refused');
   // Replaying a whole callback, cookie included: LinkedIn's code was already spent.
   const good = await signIn();
   assert.ok(good.code);
   const replay = await api(new Request(good.callback, { headers: { cookie: good.cookie } }));
-  assert.match(decodeURIComponent(replay.headers.get('location')), /did not accept/);
+  assert.equal(replay.headers.get('location'), `${APP}/#linkedin_error=refused`);
 
   const wrong = setup({ secret: 'not-the-secret' });
   const refused = await wrong.signIn();
-  assert.match(refused.error, /did not accept the sign-in \(invalid_client\)/);
+  assert.equal(refused.error, 'refused');
+  assert.ok(logged.some((line) => /did not accept the sign-in \(invalid_client\)/.test(line)), 'the reason LinkedIn gave is in the log, not in the address');
   assert.equal(refused.code, null);
   assert.deepEqual(await wrong.store.listLinkedinProfiles(), [], 'nothing is recorded for a sign-in that failed');
+
+  // LinkedIn takes the code but then gives no profile, or cannot be reached at all.
+  const noProfile = setup({ fetch: (input, init, real) => (String(input).endsWith('/v2/userinfo') ? new Response('{}', { status: 401 }) : real(input, init)) });
+  assert.equal((await noProfile.signIn()).error, 'no_profile');
+  const unreachable = setup({ fetch: async () => { throw new TypeError('fetch failed'); } });
+  assert.equal((await unreachable.signIn()).error, 'failed');
 
   // Without the two LinkedIn settings the routes do not exist and the app is as it was.
   const plain = createApi({ store: createMemoryStore() });
@@ -270,4 +279,45 @@ test('a handoff code is only good in the browser that went through LinkedIn', as
   assert.equal(done.status, 200);
   assert.match(done.headers.get('set-cookie'), /^cc_li_state=; Path=\/api\/linkedin; Max-Age=0/, 'the state cookie is cleared once it has done its job');
   assert.equal((await done.json()).me.name, 'Victor Victim');
+});
+
+test('the page shows its own sentence for every reason the server can give, and never text from the address', async (t) => {
+  // public/auth.js is browser code; it only needs the address and the history of the page it runs in.
+  const { linkedin } = await import('../public/auth.js');
+  const visit = (hash) => {
+    globalThis.location = { hash, pathname: '/', search: '' };
+    globalThis.history = { replaceState() {} };
+    return linkedin.takeReturn();
+  };
+  t.after(() => { delete globalThis.location; delete globalThis.history; });
+
+  // Every code /api/linkedin/callback can put in the address (collected in the test above).
+  const { signIn } = setup();
+  const noProfile = setup({ fetch: (input, init, real) => (String(input).endsWith('/v2/userinfo') ? new Response('{}', { status: 401 }) : real(input, init)) });
+  t.mock.method(console, 'error', () => {});
+  const landings = [
+    await signIn({ decision: 'cancel' }),
+    await signIn({ tamper: (u) => u.replace(/state=[^&]+/, 'state=forged') }),
+    await signIn({ tamper: (u) => u.replace(/code=[^&]+/, 'code=made-up') }),
+    await noProfile.signIn(),
+    await setup({ fetch: async () => { throw new TypeError('fetch failed'); } }).signIn(),
+  ];
+  assert.deepEqual(landings.map((l) => l.error), ['cancelled', 'interrupted', 'refused', 'no_profile', 'failed']);
+  const general = 'Sign-in did not complete. Please try again.';
+  const shown = landings.map((l) => visit(new URL(l.landed.headers.get('location')).hash).error);
+  assert.deepEqual(shown, [
+    'You cancelled the LinkedIn sign-in.',
+    'Sign-in was interrupted. Please try again.',
+    'LinkedIn did not accept the sign-in. Please try again.',
+    'LinkedIn did not return a profile. Please try again.',
+    'LinkedIn did not complete the sign-in. Please try again.',
+  ]);
+
+  // A hand-written link: whatever follows the "=" is never shown, not even a name every object has.
+  for (const text of ['Your account is locked. Call 020 555 0100 to unlock it.', '<b>hello</b>', 'constructor', 'toString', '__proto__', 'Cancelled', '']) {
+    assert.deepEqual(visit(`#linkedin_error=${encodeURIComponent(text)}`), { error: general }, text);
+  }
+  // A good return carries the handoff code, and an ordinary address is left alone.
+  assert.deepEqual(visit('#linkedin=abc'), { code: 'abc' });
+  assert.equal(visit(''), null);
 });

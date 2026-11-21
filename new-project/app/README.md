@@ -19,8 +19,9 @@ Built 21 Nov 2026. No dependencies: Node 20+ only.
 cd new-project/app
 npm start          # http://localhost:3000
 npm run phones     # the same server behind an https address, with a QR code, for real phones
-npm test           # 15 tests: bearings, invite/accept/decline, demo bots, email sign-in, LinkedIn sign-in,
-                   #           pictures, the privacy boundary, Snowflake store without the new tables, QR code
+npm test           # 20 tests: bearings, invite/accept/decline, demo bots, email sign-in, LinkedIn sign-in and its
+                   #           error messages, pictures, the privacy boundary, bad requests to the server,
+                   #           Snowflake store without the new tables, QR code
 ```
 
 On a laptop there is no compass sensor, so the app switches to **drag the dial to turn** (or the left/right arrow keys). Open *Demo tools* and tap **Add demo people** to place five bots around you; one of them invites you, and any bot you invite accepts after a few seconds. That shows the whole flow on one device.
@@ -36,8 +37,10 @@ npm run phones
 
 It starts the server and a Cloudflare quick tunnel (no account), waits until the public address answers, and prints the address with a QR code to scan. Ctrl-C stops the server and closes the tunnel. Things to know:
 
-- **The address is new on every run.** Anyone who has it can reach this laptop's copy of the app while the command runs.
+- **The address is new on every run.** Anyone who has it can reach this laptop's copy of the app while the command runs. Demo mode is on unless `DEMO=0`, so they can also sign up without an account and add demo people to this server's store; the command says so when it prints the address.
 - Sign-in providers only send people back to addresses they were told about. For each run, add `<address>/api/linkedin/callback` to the LinkedIn app and `<address>/callback` to the Logto app; the command prints both. The quick sign-up needs nothing.
+- While `npm run phones` runs, open the printed https address on the laptop too: a LinkedIn sign-in started from `http://localhost:3000` fails the first time with "Sign-in was interrupted".
+- The LinkedIn stand-in (`LINKEDIN_MOCK_URL`) only works in a browser on the laptop. Phones still show its button, but it sends them to their own `localhost`; the command warns about this. On phones use "Try the demo without an account".
 - On iPhone use Safari itself, not a browser inside another app: in-app browsers can refuse motion access.
 - Run on this Mac on 21 Nov over the university network: the address was up and answering about 10 s after the command started, and the whole two-person flow passed through it in a test browser (below). **Not yet opened on a real phone.**
 - Do not open the address by hand in the first second after it appears. A lookup made before the name exists is remembered as "no such site": on this Mac that lasted over three minutes. The command waits for you and checks without that kind of lookup.
@@ -76,7 +79,7 @@ Things to know:
 
 - Accounts are shared with Cila: someone who signs in here becomes a user in Cila's Logto, and the sign-in page carries Cila's branding.
 - Sign-in depends on that Logto server being up.
-- `DEMO=1` keeps a "Try the demo without an account" button next to email sign-in. Set `DEMO=0` to require email for everyone.
+- Demo mode is on unless `DEMO=0`, and it keeps a "Try the demo without an account" button next to LinkedIn and email sign-in. Set `DEMO=0` to require a real sign-in for everyone.
 - To try the flow with no Logto access: `npm run mock-signin` in one terminal, then `LOGTO_ENDPOINT=http://localhost:3299 LOGTO_APP_ID=mock-app npm start`. The stand-in accepts any email and sends nothing. It is for local testing only.
 
 ### LinkedIn
@@ -95,9 +98,11 @@ What LinkedIn allows was checked against its documentation on 21 Nov 2026: [`../
 
 How it works: LinkedIn's token endpoint needs the client secret, so, unlike the Logto flow, the exchange runs on our server (`lib/linkedin.mjs`). The button goes to `/api/linkedin/start`, which sends the browser to LinkedIn. LinkedIn sends it back to `/api/linkedin/callback` with a one-time code; the server swaps the code for an access token, reads the member from LinkedIn's userinfo endpoint, records it and hands the page a one-time code for its session. The secret and the access token never reach a browser, and the access token is not kept. The server reads userinfo rather than checking the ID token; the reasons are in the findings file.
 
+When a sign-in does not finish, the server sends the browser back with a short code, `/#linkedin_error=cancelled`, `failed`, `interrupted`, `refused` or `no_profile`, and the page shows its own sentence for that code (`public/auth.js`). Anything else after the `=` gets one general sentence, so a hand-written link cannot put its own text on the page. The email sign-in return (`/callback?error=...`) is treated the same way. What LinkedIn actually said goes to the server log.
+
 To try it with no LinkedIn app: `npm run mock-linkedin` in one terminal, then start the app with the three values it prints. The stand-in "signs in" any name you type. It is for local testing only.
 
-**What is recorded** for someone who signs in with LinkedIn, one record per user: LinkedIn's id for them, name, given and family name, email, whether LinkedIn says the email is verified, the picture link, locale, the profile address they typed, LinkedIn's answer as received, and when it was first recorded and last read. It is read again only when that person signs in again, never on a schedule. They can see it and delete it under **People, Your LinkedIn data**. A later processing job can read it through `store.listLinkedinProfiles()` or the `LINKEDIN_PROFILES` table. LinkedIn's API terms limit what such a job may do with it; see the findings file before writing one.
+**What is recorded** for someone who signs in with LinkedIn, one record per user: LinkedIn's id for them, name, given and family name, email, whether LinkedIn says the email is verified, the picture link, locale, the profile address they typed, LinkedIn's answer as received, and when it was first recorded and last read. It is read again only when that person signs in again, never on a schedule. They can see it and delete it under **People, Your LinkedIn data**. Deleting removes that record only: the account, the profile (name included), a picked photo and the sign-in id `linkedin|<sub>` in the user row stay, and the record is made again at the next LinkedIn sign-in. A later processing job can read it through `store.listLinkedinProfiles()` or the `LINKEDIN_PROFILES` table. LinkedIn's API terms limit what such a job may do with it; see the findings file before writing one.
 
 Things to know: signing out of the app does not sign the browser out of LinkedIn, so on a shared device the next "Sign in with LinkedIn" can go straight through as the previous person. A second device signing in ends the first device's session, as with email sign-in.
 
@@ -110,7 +115,7 @@ Every person the API returns (`nearby` items, `person` in the People lists, and 
 - Phone GPS is good to about 5–10 m outdoors and often 20–50 m indoors. Two people in the same room cannot be told apart by direction. The server reports how unsure each bearing is, and the dial draws a wide red wedge and says "direction uncertain" instead of pretending.
 - For the film or a live demo, stand outdoors at least 50 m apart, or use demo people and *Turn by hand*.
 - Indoor phone compasses can be off by a lot (see `../findings/compass-frontend-design/RESULT.md`). *Turn by hand* is the fallback.
-- **Nobody is placed at a made-up position.** With no position (plain http, location refused, no fix yet) a person is off every compass and the page says which of the three it is and what to do, with **Try again**. The fixed Bush House position is only a button, *Use a demo position instead*, shown when `DEMO=1`; everyone who chooses it stands on the same spot.
+- **Nobody is placed at a made-up position.** With no position (plain http, location refused, no fix yet) a person is off every compass and the page says which of the three it is and what to do, with **Try again**. The fixed Bush House position is only a button, *Use a demo position instead*, shown in demo mode (on unless `DEMO=0`); everyone who chooses it stands on the same spot.
 - A position less accurate than 100 m is called out in the status line as too rough to point with. On an iPhone this usually means Precise Location is off for the site.
 - Updates are polled every 3 s, so a move shows on the other phone 3 to 6 s later.
 
@@ -131,13 +136,18 @@ This has not been done. A test browser stands in for the phones' GPS, not for th
 
 ### Privacy choices already in the code
 
+- **Consent on first open.** A dialog (`public/consent.js`) blocks the page until the visitor agrees or declines; declining keeps the app closed, and withdrawing later removes the position. The privacy notice (`public/privacy.html`) is linked from the dialog, the sign-up form and *Demo tools*, and describes what this code stores, including LinkedIn sign-in, pictures and the state of the two extra Snowflake tables. It has had no legal review. When the notice changes in substance, bump `REVISION` in `consent.js` so that everyone is asked again (now 2).
 - Another person's coordinates never leave the server. Clients get a bearing and a distance only.
 - Only the latest position is stored, and it stops counting after 45 seconds. *Go invisible*, signing out, closing the page or losing your position removes it at once.
+- Nobody is placed at a made-up position. Without a position a person is on no compass; the Bush House demo position is used only by someone who taps its button.
 - Someone who was declined cannot invite the same person again.
 - The app keeps a random session token on the device and the server stores only its hash. There are no passwords. Your email address is never shown to other users.
 - **What other people receive about you** is: a random id, your name, what you do, your LinkedIn address, your tags (and how they match theirs), your picture, and your direction and distance. A test pins that list of fields. What LinkedIn told us (its id for you, your email, locale, picture link and the raw answer) stays on the server and is shown only to you.
 - A LinkedIn email is kept in the LinkedIn record only, not in the app's user row.
-- A picked photo is stored as you sent it (a 256 px JPEG) until you replace it. There is no "remove photo" control in the page yet, and no delete-account route.
+- **Delete my LinkedIn data** (People tab) deletes the LinkedIn record: LinkedIn's id, names, email, picture link, locale, the typed profile address and the raw answer held in it. It does not delete the account, the profile (name included), a picked photo, invitations, or the sign-in id `linkedin|<sub>` in the user row, which is what lets the person sign in again.
+- **The picture route asks for no sign-in.** Anyone who has been shown a person's picture address (`/api/avatar?id=<their id>`) can load that person's current picture later, including after they go invisible. It gives a face or initials, never a position or an email.
+- A picked photo is stored as it was sent (a 256 px JPEG made in the browser; the original file is not uploaded). The API can replace or remove it (`POST /api/profile` with `photo`), but the page shows the profile form only once, so there is no way in the page yet to change or remove a photo afterwards. There is no delete-account route, and none is planned.
+- Text taken from an address is never displayed. A failed sign-in comes back as a short code and the page shows its own sentence for it.
 
 ## Snowflake
 
@@ -181,6 +191,7 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 | `public/compass.js` | **The dial.** Restyle or replace this file; keep `createCompass`, `setPeople` and `render` and nothing else needs to change |
 | `public/heading.js` | Phone heading: iOS permission, Android absolute orientation, manual fallback |
 | `public/app.js`, `index.html` | Screens, location, polling, the card and the inbox |
+| `public/consent.js`, `consent.css`, `privacy.html`, `public/vendor/cookieconsent/` | The first-open consent dialog (CookieConsent 3.3.0, MIT, vendored) and the privacy notice |
 | `public/style.css` | The look: Apple-style liquid glass, Apple system colours (light and dark), fade transitions for every view, sheet and button state |
 | `public/motion.js` | Presentation only: adds the in-between animation stages (busy shimmer while a request runs, rows sliding and fading in the People lists, card cross-fade). Deleting it leaves the app working |
 | `test/*.test.mjs` | Tests |

@@ -6,6 +6,7 @@ import { playConfirm } from './confirm.js';
 import { angleDiff, createHeading } from './heading.js';
 
 const SYNC_MS = 3000; // how often we report position and refresh who is around
+const SYNC_TIMEOUT_MS = 10_000; // an answer that has not come by then is given up, so the next tick can ask again
 const AIM_DEG = 15; // "pointing at someone" = within this many degrees of straight ahead
 const BUSH_HOUSE = { lat: 51.5131, lon: -0.1174, accuracy: 5 }; // demo position: only ever used when someone chooses it
 const ROUGH_M = 100; // a position less accurate than this cannot point at a person
@@ -45,11 +46,13 @@ const state = {
   engine: null,
 };
 
-async function api(method, path, body) {
+/** `timeoutMs`: give up after this long (the request is aborted and this throws a TimeoutError). */
+async function api(method, path, body, timeoutMs) {
   const res = await fetch(path, {
     method,
     headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
+    signal: timeoutMs ? AbortSignal.timeout?.(timeoutMs) : undefined,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(data.error ?? `Request failed (${res.status})`), { status: res.status });
@@ -89,13 +92,13 @@ $('photo').addEventListener('change', async (e) => {
   const err = $('signup-error');
   err.hidden = true;
   const [file] = e.target.files;
-  if (!file) { pickedPhoto = undefined; return; }
+  if (!file) return; // cancelled: the photo the preview shows is still the one that will be saved
   try {
     pickedPhoto = await shrinkPhoto(file);
     $('photo-preview').src = pickedPhoto;
     $('photo-preview').hidden = false;
   } catch {
-    pickedPhoto = undefined;
+    // An earlier good pick stays: the preview still shows it, so it is what gets saved.
     e.target.value = '';
     err.textContent = 'That image could not be read. Please pick another one.';
     err.hidden = false;
@@ -243,7 +246,8 @@ async function sync() {
   syncing = true;
   try {
     const p = state.visible ? state.position : null;
-    const out = await api('POST', '/api/sync', p ? { lat: p.lat, lon: p.lon, accuracy: p.accuracy } : {});
+    // With a time limit: one answer that never arrives would otherwise hold the guard above for good.
+    const out = await api('POST', '/api/sync', p ? { lat: p.lat, lon: p.lon, accuracy: p.accuracy } : {}, SYNC_TIMEOUT_MS);
     state.nearby = out.nearby;
     state.inbox = { incoming: out.incoming, outgoing: out.outgoing, connections: out.connections };
     state.engine = out.engine;
@@ -254,7 +258,7 @@ async function sync() {
     renderEngine();
   } catch (ex) {
     if (ex.status === 401) return signOut();
-    $('status').textContent = `Cannot reach the server: ${ex.message}`;
+    $('status').textContent = `Cannot reach the server: ${ex.name === 'TimeoutError' ? `no answer after ${SYNC_TIMEOUT_MS / 1000} seconds. Trying again…` : ex.message}`;
   } finally {
     syncing = false;
     if (syncAgain) { syncAgain = false; sync(); }
@@ -383,7 +387,7 @@ function renderCard() {
   const where = p.spreadDeg > 35 ? `about ${p.distanceM} m, direction uncertain` : `${p.distanceM} m away`;
   // replaceChildren would print a null as the word "null", so drop the empty slots first.
   card.replaceChildren(...[
-    h('div', { class: 'card-head' }, h('h2', {}, p.name), h('span', { class: 'where' }, where)),
+    h('div', { class: 'card-head' }, h('div', { class: 'row-head' }, p.picture ? h('img', { class: 'avatar', src: p.picture, alt: '' }) : null, h('h2', {}, p.name)), h('span', { class: 'where' }, where)),
     p.headline ? h('p', {}, p.headline) : null,
     why(p),
     tags(p),
@@ -416,7 +420,7 @@ async function renderLinkedinData() {
   $('linkedin-data').hidden = false;
   $('linkedin-record').replaceChildren(profile
     ? h('article', { class: 'row' },
-      h('p', {}, `From LinkedIn we keep your name (${profile.name ?? 'none given'}), ${profile.email ? `your email address (${profile.email})` : 'no email address'}, the link to your LinkedIn photo and your language setting. First recorded ${when(profile.firstSeenMs)}, last read ${when(profile.lastRefreshedMs)}. Other people see your name and photo only.`),
+      h('p', {}, `From LinkedIn we keep LinkedIn’s id for you, your name (${profile.name ?? 'none given'}), ${profile.email ? `your email address (${profile.email})` : 'no email address'}, the link to your LinkedIn photo, your language setting and LinkedIn’s answer as we received it. First recorded ${when(profile.firstSeenMs)}, last read ${when(profile.lastRefreshedMs)}. Other people see your name and photo only.`),
       h('div', { class: 'actions' }, h('button', {
         class: 'ghost', type: 'button',
         onclick: async () => {
@@ -425,7 +429,7 @@ async function renderLinkedinData() {
           renderLinkedinData();
         },
       }, 'Delete my LinkedIn data')))
-    : h('p', { class: 'empty' }, 'Nothing from LinkedIn is kept about you. It is recorded again if you sign in with LinkedIn again.'));
+    : h('p', { class: 'empty' }, 'Your LinkedIn email, photo link and language are deleted. We keep only the LinkedIn id that lets you sign in again. They are recorded again if you sign in with LinkedIn again.'));
 }
 $('tab-people').addEventListener('click', () => renderLinkedinData().catch(() => {}));
 
@@ -457,7 +461,7 @@ function renderEngine() {
 $('seed').addEventListener('click', async () => {
   // Demo people are placed around you, so there has to be a position: your real one, or the demo one you chose.
   const p = state.position;
-  if (!p) return alert(state.running ? 'Your position is not known yet. See the message under the compass, or choose the demo position there.' : 'Start the compass first.');
+  if (!p) return alert(!state.running ? 'Start the compass first.' : state.locationProblem ? 'Your position is not known. See the message under the compass, or choose the demo position there.' : 'Still finding your position. Answer the browser’s location question if it is asking; otherwise a message with a demo-position button appears under the compass within 15 seconds.');
   try { await api('POST', '/api/demo/seed', { lat: p.lat, lon: p.lon }); sync(); } catch (ex) { alert(ex.message); }
 });
 $('manual').addEventListener('click', () => {
@@ -516,7 +520,11 @@ $('signin').addEventListener('click', async () => {
     $('signin').disabled = false;
   }
 });
-$('signin-linkedin').addEventListener('click', () => { $('signin-linkedin').disabled = true; linkedin.signIn(); });
+$('signin-linkedin').addEventListener('click', () => {
+  $('signin-linkedin').disabled = true;
+  linkedin.signIn();
+  setTimeout(() => { $('signin-linkedin').disabled = false; }, 8000); // the page was never left
+});
 // Back from the sign-in page brings this page back exactly as it was left: buttons still disabled.
 window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = $('signin-linkedin').disabled = false; });
 $('quick').addEventListener('click', () => show('signup'));
