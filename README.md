@@ -1,5 +1,9 @@
 # Reference Loop
 
-A small static website introducing the reference-loop research workflow. Open `index.html` locally or deploy the repository to Vercel as a static site. No build step or dependencies are required.
+A static website introducing the reference-loop research workflow. Open `index.html` locally; no build step or dependencies are required.
 
-The original [skill instructions](reference-loop/SKILL.md) are included for reading. The helper scripts and supporting references they mention are not included, so this copy is not a complete installable skill.
+The [reference-loop](reference-loop/) directory contains the skill, helper scripts, references and tests. Read its [README](reference-loop/README.md) and [SKILL.md](reference-loop/SKILL.md) before use. The source-tool notes include historical device-specific examples; check availability on your own device. Node.js 22 or later is required for the JavaScript helpers.
+
+## Deployment
+
+Deploy to Vercel only when explicitly requested or when needed to show a live result. Pushing to GitHub does not currently trigger a Vercel deployment.
