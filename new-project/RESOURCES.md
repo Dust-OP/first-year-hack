@@ -56,7 +56,7 @@ The researcher keeps these on their own machine. They are not committed, for the
 | Raw cached web pages (Devpost, Luma, hackathon galleries) and one fetched PDF | Third-party copies. The live URLs are cited in the reports |
 | Third-party source files read during research (Cosmodial `gyro.js`, SteelSeries `steelseries.js`, a three.js orientation-controls fork) | Read for evaluation only. Copy code into the app only when it is adopted, with its license and commit noted (see `AGENTS.md` rule 5) |
 | One-off scraping and caption scripts (about 100 lines in total) | Throwaway helpers. They have no reuse value. The two gallery build scripts are kept, in `gallery/tools/` and `showcase/tools/` |
-| Safari icon images and the Safari clips and videos built from them (`video-info/safari/`, ignored by git) | Apple artwork; the repo is public. Sources, order and a one-command rebuild are in `video-info/README.md` |
+| Safari icon images and the Safari clips and videos built from them (the media under `video-info/safari/` is ignored by git; the JSON manifests there are tracked) | Apple artwork; the repo is public. Sources, order and the rebuild commands are in `video-info/README.md` |
 | Working copies of the two research tasks | The repo copies in `findings/` are the ones to read |
 
 ## Known gaps

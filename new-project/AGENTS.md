@@ -66,7 +66,7 @@ first-year-hack/                  repository root
 | `findings/<topic>/evidence/` | Source notes (`E-*.json`) from `reference-loop/loop.mjs note`. | Research sessions |
 | `new-project/app/` | The product: a zero-dependency Node server (`server.mjs`, `lib/`), the phone UI (`public/`), tests (`test/`) and Snowflake setup (`snowflake/`). `public/compass.js` is the dial and belongs to the front-end design work. Start with `app/README.md`. | App sessions |
 | `../reference-loop/` | The research method and its helpers. Do not put project findings here. | Skill maintainers |
-| `new-project/video-info/` | Demo-video material: ordered source images, swap clips and continuous videos, credits, and the scripts that build them. Start with `video-info/README.md`. Apple artwork (Safari icons) stays out of git via `video-info/.gitignore`. | Video sessions |
+| `new-project/video-info/` | Demo-video material: ordered source images, swap clips and continuous videos, credits, and the scripts that build them. Start with `video-info/README.md`. Apple artwork (the Safari icons and the clips and videos built from them) stays out of git via `video-info/.gitignore`. | Video sessions |
 
 **App checks:** run `npm test` in `new-project/app/` after changing anything under `lib/`. Never commit `app/.env` or key files.
 
