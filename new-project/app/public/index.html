@@ -46,7 +46,7 @@
       <fieldset><legend>I am looking for</legend><div class="chips" data-field="seeks"></div></fieldset>
       <p id="signup-error" class="error" role="alert" hidden></p>
       <button id="signup-submit" class="primary" type="submit">Create my profile</button>
-      <p class="fine">People within 500 m who also use this app can see your name, photo, what you do and your LinkedIn link while you have the compass open. They see a direction and a distance, never your position on a map. We keep what you enter here. Your position is kept only while the compass is open, and only the latest one.</p>
+      <p class="fine">People within 500 m who also use this app can see your name, photo, what you do and your LinkedIn link while you have the compass open. They see a direction and a distance, never your position on a map. We keep what you enter here. Your position is kept only while the compass is open, and only the latest one. <a href="privacy.html">Privacy notice and your choices</a></p>
     </form>
   </main>
 
@@ -76,6 +76,7 @@
         <button id="hide" type="button">Go invisible</button>
         <button id="signout" type="button">Sign out</button>
       </div>
+      <p class="fine"><a href="privacy.html">Privacy notice and your choices</a></p>
       <pre id="engine" class="engine"></pre>
     </details>
   </main>
@@ -88,6 +89,8 @@
     <section id="linkedin-data" hidden><h2>Your LinkedIn data</h2><div id="linkedin-record" class="list"></div></section>
   </main>
 
+  <script src="vendor/cookieconsent/cookieconsent.umd.js"></script>
+  <script src="consent.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="motion.js"></script>
 </body>
