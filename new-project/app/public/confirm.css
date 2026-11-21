@@ -1,0 +1,70 @@
+/* Success confirmation (confirm.js): blue disc, white tick, ripple ring, caption.
+   Uses the app's --blue token from style.css, with a fallback so this file stands alone. */
+
+.cc-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  pointer-events: none; /* never swallows a tap */
+}
+.cc-confirm[hidden] { display: none; }
+
+.cc-confirm-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(242, 242, 247, .55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+}
+@media (prefers-color-scheme: dark) {
+  .cc-confirm-scrim { background: rgba(0, 0, 0, .5); }
+}
+
+.cc-confirm-badge {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.cc-confirm-badge svg {
+  width: 132px;
+  height: 132px;
+  overflow: visible;
+}
+
+.cc-confirm-disc,
+.cc-confirm-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.cc-confirm-disc {
+  fill: var(--blue, #007aff);
+  filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--blue, #007aff) 40%, transparent));
+}
+.cc-confirm-ripple {
+  fill: none;
+  stroke: var(--blue, #007aff);
+  stroke-width: 3;
+  opacity: 0;
+}
+.cc-confirm-tick {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.cc-confirm-label {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--label, #000);
+}
