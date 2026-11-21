@@ -291,11 +291,16 @@ export function createHeading({ onSource, onQuality } = {}) {
     /** Call every frame. */
     tick(dtMs, now = performance.now()) {
       if (byHand() && !grabbed && spin !== 0 && dtMs > 0) {
-        // Exact for any frame length: the speed decays by e^(-t/friction) and the angle gets the
-        // distance covered while it does.
-        const tau = S.frictionMs / 1000, k = Math.exp(-dtMs / S.frictionMs);
-        raw = wrap360((raw ?? 0) + spin * tau * (1 - k));
-        spin *= k;
+        // Two kinds of friction, as on a real pivot in fluid: the fluid slows the dial in
+        // proportion to its speed, the pivot by a fixed amount, which is what brings it to a clean
+        // stop instead of a long crawl:   speed' = -speed / tau - c
+        // Solved exactly for the time that passed, so the coast is the same at any frame rate.
+        const tau = S.frictionMs / 1000, c = Math.max(0, S.pivotFriction), dir = Math.sign(spin), v0 = Math.abs(spin);
+        const rest = c > 0 ? tau * Math.log(1 + v0 / (c * tau)) : Infinity; // seconds until it stops
+        const t = Math.min(dtMs / 1000, rest);
+        const k = Math.exp(-t / tau);
+        raw = wrap360((raw ?? 0) + dir * (tau * (v0 + c * tau) * (1 - k) - c * tau * t));
+        spin = dtMs / 1000 >= rest ? 0 : dir * ((v0 + c * tau) * k - c * tau);
         if (Math.abs(spin) < S.stopRate) spin = 0;
       }
       // iOS reports about 60 times a second, moving or not, so silence there is a real dropout.

@@ -287,15 +287,22 @@ $('start').addEventListener('click', async () => {
     heading.release(e.timeStamp);
   });
 
-  // Arrow keys: a tap turns one step. Holding the key spins the dial up; let go and it coasts.
+  // Arrow keys: a tap turns one step. Holding the key spins the dial up; letting go takes most of
+  // that speed away at once, so it coasts a little and stops close to where the key was released.
+  let keySpin = false; // the spin now on the dial was put there by a held key
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     if (!state.running || $('view-compass').hidden || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
     const dir = e.key === 'ArrowRight' ? 1 : -1;
-    if (e.repeat && !reduceMotion.matches) heading.push(dir * S.keyPush, S.keyMaxRate);
+    if (e.repeat && !reduceMotion.matches) { heading.push(dir * S.keyPush, S.keyMaxRate); keySpin = true; }
     else heading.turn(dir * S.keyStepDeg);
     e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (!keySpin || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    keySpin = false;
+    heading.push(-heading.spin * S.keyBrake);
   });
 }
 

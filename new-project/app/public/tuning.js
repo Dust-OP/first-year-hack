@@ -23,7 +23,8 @@ export const TUNING = {
 
   // Turning by hand (laptops, refused permission, a drifting indoor compass).
   spin: {
-    frictionMs: 750, // a flicked dial loses about 63% of its speed in this time
+    frictionMs: 750, // fluid: a flicked dial loses about 63% of its speed in this time
+    pivotFriction: 40, // pivot: and this much speed every second on top, so it stops cleanly (0 = a long crawl)
     stopRate: 6, // below this speed the dial is at rest
     maxRate: 1440, // fastest flick: four turns a second
     minFlick: 40, // letting go slower than this is a release, not a flick
@@ -32,6 +33,7 @@ export const TUNING = {
     keyStepDeg: 5, // one tap of an arrow key
     keyPush: 45, // holding an arrow key: speed added per key repeat...
     keyMaxRate: 220, // ...up to this speed
+    keyBrake: 0.65, // letting go of the key takes this share of the speed away at once
   },
 
   // Lock-on: when the dial gives way to the person's picture, and when it comes back.
