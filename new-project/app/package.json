@@ -19,6 +19,7 @@
     "users": "node postgres/users.mjs"
   },
   "dependencies": {
-    "@neondatabase/serverless": "1.2.0"
+    "@neondatabase/serverless": "1.2.0",
+    "playwright-core": "1.65.0"
   }
 }

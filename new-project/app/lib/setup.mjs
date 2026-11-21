@@ -4,6 +4,7 @@
 // Store choice: DATABASE_URL -> Postgres (Neon on Vercel), else SNOWFLAKE_ACCOUNT
 // -> Snowflake, else the in-memory store.
 
+import { connectionClient } from './connection-client.mjs';
 import { createApi } from './api.mjs';
 import { createEmailCode } from './email-code.mjs';
 import { createPostgresCodeState } from './email-code-postgres.mjs';
@@ -54,7 +55,7 @@ export async function createAppFromEnv(env = process.env, { shared = false } = {
   const emailCode = emailCodeFromEnv(env, { pg, shared });
   const api = createApi({
     store, demo: env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto),
-    linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: env.PUBLIC_URL || null, emailCode,
+    linkedin: linkedinCfg && createLinkedin(linkedinCfg), connections: connectionClient(env), publicUrl: env.PUBLIC_URL || null, emailCode,
   });
   return { api, store, logto, linkedinCfg, emailCode };
 }

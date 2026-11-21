@@ -13,7 +13,7 @@ Built 21 Nov 2026. Node 20+. Locally it runs with no install; the one dependency
 3. The dial shows everyone within 500 m who has the app open. The **red needle** points at your best match (tap anyone else to follow them instead).
 4. **Turn until the needle points up.** The dial moves like a real compass: it follows you with a little inertia, overshoots slightly and settles. Hold your aim on someone (within 15°) for a moment and the compass has found them: a ring closes round the rim, the markings fade into **their profile picture** in the same glass disc, and their card pops up with who they are, why they match and their LinkedIn link. Turn 28° or more away, tap the picture or close the card, and the compass fades back. Tapping someone's dot shows them at once.
 5. **Send invitation.** They get it under *People*, read your profile, and **accept or decline**.
-6. Once accepted, both sides get **Connect on LinkedIn**, which opens the other person's real LinkedIn profile.
+6. Once accepted, both sides get **Connect on LinkedIn**, which opens their profile or pre-fills the optional connection worker form in People.
 
 ## Run it
 
@@ -104,7 +104,7 @@ Android only (Chrome):
 | Profile pictures | The dial shows `picture` when a person carries one (a URL, or `null`). **The server on this branch does not send it yet**, so today everyone appears as large initials. Checked with pictures added to the server's answers on their way to the page: a good one, `null`, slow, missing (404) and not-an-image |
 | Vercel deployment | Deployed 21 Nov (production, London region `lhr1`). Health, static files, `/callback` and the API routes checked on the live URL. **Runs on the in-memory store until the Neon database is connected**; see below |
 | Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
-| Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
+| Sending the LinkedIn connection request for the user | Optional per-participant browser worker. Setup and verification limits below. |
 
 ### Sign-in with an emailed code (wayrise.app)
 
@@ -141,8 +141,29 @@ Things to know:
 What LinkedIn allows was checked against its documentation on 21 Nov 2026: [`../findings/linkedin-integration/RESULT.md`](../findings/linkedin-integration/RESULT.md). In short:
 
 - **Sign In with LinkedIn (OpenID Connect)** is self-service and returns a member id, name, picture link, locale and, optionally, email. It does **not** return the person's profile address or headline, so users still paste their own `linkedin.com/in/...` link, and nothing checks that the link is really theirs.
-- **Sending connection requests is not possible for us**: LinkedIn's Invitations API is "restricted to approved partners". So the request and the accept/decline happen **inside our app**, and the last step hands over to LinkedIn: the button opens the person's profile, and on a phone that opens the LinkedIn app, where they tap Connect.
-- The app does not scrape linkedin.com and uses no unofficial API.
+- The Invitations API requires partner access. The team reports separate permission for the optional browser workflow below. Sign-in alone grants no browser session.
+
+#### Remote connection worker
+
+On a single persistent worker host use Node 24+, a non-root service account, an encrypted volume, and one worker process per data directory. Install the pinned dependency with `npm ci` and Chromium with `npx playwright-core install chromium` (or set `CONNECTION_CHROME` to a Chromium executable). Set the following through your service's secret manager:
+
+| Setting | Where | Value |
+|---|---|---|
+| CONNECTION_DATA_DIR | Worker only | Absolute private directory outside the checkout for SQLite sessions and jobs |
+| CONNECTION_SESSION_KEY | Worker only | Stable 32 random bytes in base64, generated with `openssl rand -base64 32` |
+| CONNECTION_WORKER_TOKEN | Web server and worker | Independent random bearer secret, at least 32 characters |
+| CONNECTION_WORKER_URL | Web server and enrollment station | Origin of the worker's HTTPS reverse proxy, or `http://127.0.0.1:3310` on one host |
+| CONNECTION_PORT | Worker | Optional loopback port, default 3310 |
+
+Start `node connections-worker.mjs`. Keep the encryption key, tokens, bodies and pairing codes out of logs. The web server forwards authenticated requests to the worker. On separate hosts expose the worker through TLS and restrict ingress to the web backend and enrollment station. Configure a durable app user store so Compass account IDs survive restarts.
+
+1. Sign in to Compass and open **People → Get pairing code**. Quick demo accounts cannot submit jobs.
+2. On a private team-hosted display dedicated to that participant, run `node dev/pair-connections.mjs` with the worker URL and a browser installed. Enter the one-time code and sign in to LinkedIn in the fresh browser. Confirm the account before pressing Enter. This station only needs the worker URL. Give each participant exclusive access during enrollment and close their display afterwards. Codes expire after ten minutes. Repeat this step when LinkedIn asks for verification.
+3. Under **People**, paste a profile URL and tap **Add Connection**. The accepted match’s **Connect on LinkedIn** button pre-fills the same form. A click submits one job from the participant’s linked session. **Disconnect LinkedIn worker** removes that session, its pairing code and job history.
+4. API clients send an authenticated `POST /api/connections` with `{"profileUrl":"https://www.linkedin.com/in/example-user/"}`. A new job returns HTTP 202 with `jobId` and `status`. Poll `GET /api/connections?jobId=…` with the same Compass bearer token. An unpaired account gets `verification_required` immediately. Repeated requests for the same owner and target return the existing job unless it failed before submission or required verification.
+5. The worker recognizes English profile controls. It reports `sent` after confirmation, `pending` for an existing invitation, and `already_connected` for a first-degree connection. If it loses confirmation after a click or restarts during delivery, it reports `outcome_unknown`. Review the sent invitations in LinkedIn before taking any further action.
+
+The worker is opt-in and requires separate provisioning from the Vercel app. Real LinkedIn enrollment, current profile layouts and invitation delivery still need a team-authorized live check.
 
 **To switch LinkedIn sign-in on** (not done yet; nobody has run this against the real LinkedIn):
 

@@ -44,10 +44,13 @@
   <ul>
     <li>You are sent to LinkedIn to sign in. LinkedIn then tells the app its own ID for you, your name (full, given and family), your email address and whether LinkedIn has verified it, the link to your profile photo, and your language setting. LinkedIn may leave the email out.</li>
     <li>LinkedIn does <b>not</b> tell the app your profile address or what you do. The LinkedIn link other people see is the profile share link <b>you paste</b> on the profile form (only its <code>linkedin.com/in/…</code> address is kept), and the app does not check that it is yours. The app cannot read your profile address from LinkedIn's cookies or from a LinkedIn tab, and does not try.</li>
-    <li>The app reads this at the moment you sign in, and again only when you sign in again, never in the background. The access LinkedIn grants is used for that one read and is not kept. The app asks LinkedIn only for sign-in, your basic profile and your email: it does not ask to post for you, to read your connections or to send connection requests. “Connect on LinkedIn” only opens the other person's LinkedIn link.</li>
+    <li>The app reads this at the moment you sign in, and again only when you sign in again, never in the background. The access LinkedIn grants is used for that one read and is not kept. The app asks LinkedIn only for sign-in, your basic profile and your email: it does not ask to post for you, to read your connections or to send connection requests.</li>
     <li>The name box is pre-filled with your LinkedIn name; you can change it. Other users see that name and your picture. Your LinkedIn email address, LinkedIn's ID for you and your language setting are <b>never</b> shown to other users.</li>
     <li>Signing out of Career Compass does not sign you out of LinkedIn. On a shared device, sign out at linkedin.com as well.</li>
   </ul>
+
+  <h2>Sending a LinkedIn invitation</h2>
+  <p>With the optional connection worker enabled, you can separately link a browser session using a one-time pairing code. The worker stores that session encrypted and uses it when you choose Add Connection. It records the recipient profile URL and job result. Disconnect LinkedIn worker under People deletes the session and job history. Invitations already sent remain on LinkedIn.</p>
 
   <h2>What is stored, where and for how long</h2>
   <div class="card">

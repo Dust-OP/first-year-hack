@@ -117,3 +117,25 @@ test('demo bots: five appear, one invites me, an invited bot accepts', async () 
   view = (await ada('POST', '/api/sync', { ...BUSH_HOUSE, accuracy: 5 })).body;
   assert.ok(view.connections.some((c) => c.person.id === target.id));
 });
+
+test('a connection job uses the authenticated owner and a canonical LinkedIn target', async () => {
+  const calls = [];
+  const store = createMemoryStore();
+  const api = createApi({ store, demo: true, connections: async (op, fields) => {
+    calls.push({ op, fields });
+    return Response.json({ jobId: 'abc', status: 'queued' }, { status: 202 });
+  } });
+  const anon = client(api);
+  const { body: member } = await anon('POST', '/api/signup', { name: 'Sender', linkedin: 'sender-profile' });
+  const user = client(api, member.token);
+  const post = body => user('POST', '/api/connections', body);
+  assert.equal((await anon('POST', '/api/connections', {})).status, 401);
+  assert.equal((await post({})).status, 403);
+  // Represent a completed sign-in with a stable app user, retaining the issued bearer for this fixture.
+  await store.updateUser(member.me.id, { sub: 'linkedin|sender' });
+  for (const profileUrl of ['https://evil.example/in/test', 'https://www.linkedin.com/in/%2e%2e', 'https://www.linkedin.com/in/x%2Fy']) {
+    assert.equal((await post({ profileUrl })).status, 400);
+  }
+  assert.equal((await post({ profileUrl: 'https://linkedin.com/in/Ada/?tracking=1', owner: 'another-user' })).status, 202);
+  assert.deepEqual(calls, [{ op: 'submit', fields: { owner: member.me.id, profileUrl: 'https://www.linkedin.com/in/ada' } }]);
+});

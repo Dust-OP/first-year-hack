@@ -1,5 +1,6 @@
 // Career Compass, demo v1: wires sign-up, location, heading, the dial and the inbox together.
 
+import { setupConnectionPanel } from './connections.js';
 import { createLogto, linkedin } from './auth.js';
 import { setupEmailCode } from './email-code.js';
 import { createCompass } from './compass.js';
@@ -63,9 +64,12 @@ async function api(method, path, body, timeoutMs) {
   return data;
 }
 
+const chooseTarget = setupConnectionPanel(api);
+
 // ---------- views ----------
 
 function show(view) {
+  $('connection-panel').hidden = !state.worker || !state.me || state.me.signedInWith === 'quick';
   for (const v of ['welcome', 'signup', 'compass', 'people']) $(`view-${v}`).hidden = v !== view;
   $('tab-compass').classList.toggle('is-on', view === 'compass');
   $('tab-people').classList.toggle('is-on', view === 'people');
@@ -538,6 +542,11 @@ function actions(person, relation, requestId) {
     sync();
   };
   if (relation === 'connected') {
+    if (state.worker && state.me?.signedInWith !== 'quick' && !person.demo) {
+      return [h('button', { type: 'button', class: 'btn', onclick: () => {
+        show('people'); chooseTarget(person.linkedin);
+      } }, 'Connect on LinkedIn'), linkedinLink(person)];
+    }
     return [
       h('a', { class: 'btn', href: person.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'Connect on LinkedIn'),
       h('p', { class: 'note' }, 'You both said yes. This opens their LinkedIn profile, where you tap Connect.'),
@@ -719,6 +728,7 @@ $('quick').addEventListener('click', () => show('signup'));
 (async function boot() {
   let health = {};
   try { health = await api('GET', '/api/health'); } catch { /* offline: sign-up will report it */ }
+  state.worker = Boolean(health.connections);
   state.demo = Boolean(health.demo);
   state.logto = health.auth ? createLogto(health.auth) : null;
   $('seed').hidden = !state.demo;

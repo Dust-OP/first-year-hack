@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { connectionClient } from './lib/connection-client.mjs';
 import { createApi } from './lib/api.mjs';
 import { createLinkedin, linkedinConfigFromEnv } from './lib/linkedin.mjs';
 import { createIdTokenVerifier, logtoConfigFromEnv } from './lib/logto.mjs';
@@ -29,7 +30,7 @@ const mailer = mailerConfigFromEnv();
 const emailCode = emailCodeFromEnv(process.env, { pg });
 const api = createApi({
   store, demo: process.env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto),
-  linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: process.env.PUBLIC_URL || null, emailCode,
+  linkedin: linkedinCfg && createLinkedin(linkedinCfg), connections: connectionClient(process.env), publicUrl: process.env.PUBLIC_URL || null, emailCode,
 });
 
 /**

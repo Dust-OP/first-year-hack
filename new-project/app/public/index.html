@@ -108,6 +108,16 @@
 
   <!-- 3. People: invitations and connections -->
   <main id="view-people" hidden>
+    <section id="connection-panel" hidden>
+      <h2>Add a LinkedIn connection</h2>
+      <p>Link your account once on the team’s private sign-in display. Each invitation comes from your account.</p>
+      <button type="button" data-pair>Get pairing code</button>
+      <button type="button" data-disconnect>Disconnect LinkedIn worker</button>
+      <p data-code aria-live="polite"></p>
+      <form><label>LinkedIn profile URL <input name="profileUrl" type="url" required placeholder="https://www.linkedin.com/in/…"></label>
+      <button class="primary" type="submit">Add Connection</button></form>
+      <output aria-live="polite"></output>
+    </section>
     <section><h2>Invitations for you</h2><div id="incoming" class="list"></div></section>
     <section><h2>Connections</h2><div id="connections" class="list"></div></section>
     <section><h2>Sent</h2><div id="outgoing" class="list"></div></section>

@@ -8,6 +8,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { avatarUrl, initialsSvg, photoBytes, pictureExpired, readPhoto } from './avatar.mjs';
 import { normEmail } from './email-code.mjs';
+import { connectionTarget } from './connection-client.mjs';
 import { offset } from './geo.mjs';
 import { matchScore, normTags } from './match.mjs';
 
@@ -85,7 +86,7 @@ const DEMO_PEOPLE = [
  * @param emailCode      from createEmailCode() in lib/email-code.mjs when email-code sign-in is on, else null.
  *                       Its state is in process memory: only enable it on a single long-running server.
  */
-export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null, linkedin = null, publicUrl = null, emailCode = null }) {
+export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null, linkedin = null, publicUrl = null, emailCode = null, connections = null }) {
   // The quick sign-up has no email check. Once real sign-in is on, keep it only for demos.
   const quickSignup = (!logto && !linkedin && !emailCode) || demo;
 
@@ -184,13 +185,34 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     };
   }
 
+  async function connectionRequest(request, op) {
+    const me = await auth(request);
+    if (!me) return fail(401, 'Sign in first.');
+    if (!connections) return fail(503, 'Connection worker is not configured.');
+    if (!me.sub) return fail(403, 'Sign in with a personal account to use the connection worker.');
+    const fields = { owner: me.id };
+    if (op === 'submit') {
+      fields.profileUrl = connectionTarget((await readBody(request))?.profileUrl);
+      if (!fields.profileUrl) return fail(400, 'Enter a LinkedIn profile URL.');
+      if (fields.profileUrl === connectionTarget(me.linkedin)) return fail(400, 'Choose another profile.');
+    } else if (op === 'status') {
+      fields.jobId = new URL(request.url).searchParams.get('jobId');
+      if (!fields.jobId) return fail(400, 'Job ID required.');
+    }
+    return connections(op, fields);
+  }
+
   const routes = {
+    'POST /api/connections': (req) => connectionRequest(req, 'submit'),
+    'GET /api/connections': (req) => connectionRequest(req, 'status'),
+    'POST /api/connections/pair': (req) => connectionRequest(req, 'pair'),
+    'POST /api/connections/disconnect': (req) => connectionRequest(req, 'disconnect'),
     'GET /api/health': async () =>
       json({
         ok: true, store: store.kind, demo, quickSignup, auth: logto ? { endpoint: logto.endpoint, appId: logto.appId } : null,
         // Only whether it is on. The client id and the secret stay on the server.
         linkedin: linkedin ? { standIn: Boolean(linkedin.mock) } : null,
-        emailCode: Boolean(emailCode),
+        emailCode: Boolean(emailCode), connections: Boolean(connections),
       }),
 
     'POST /api/signup': async (request) => {
