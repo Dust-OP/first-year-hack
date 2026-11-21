@@ -571,7 +571,8 @@ function renderCard() {
     tags(p),
     p.relation === 'connected' ? null : h('p', {}, linkedinLink(p)),
     h('div', { class: 'actions' }, actions(p, p.relation, p.requestId),
-      h('button', { class: 'ghost', type: 'button', onclick: () => closeCard(p.id) }, 'Close')),
+      // Not this person: back to the compass to look for someone else (they stay skipped until you turn away).
+      h('button', { class: 'ghost', type: 'button', onclick: () => closeCard(p.id) }, 'Try again')),
   ].filter(Boolean));
   card.hidden = false;
 }

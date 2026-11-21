@@ -527,7 +527,7 @@ button.primary.start {
 }
 .reveal {
   position: absolute;
-  inset: 6.4%; /* inside the tick ring, so a band of glass frames the picture */
+  inset: 17%; /* smaller than the dial: a wide band of glass frames the picture */
   /* No z-index on purpose: it sits above the dial by coming after it, and so can never rise
      above the card, the tab bar or a dialog. */
   display: block;
@@ -543,7 +543,7 @@ button.primary.start {
   -webkit-tap-highlight-color: transparent;
   opacity: 0;
   pointer-events: none;
-  transform: scale(1.1);
+  transform: scale(.45); /* it pops up out of the centre of the dial */
   filter: blur(16px);
   transition: opacity .3s var(--ease-in), transform .3s var(--ease-in), filter .3s var(--ease-in);
 }
@@ -553,6 +553,24 @@ button.primary.start {
   transform: none;
   filter: none;
   transition: opacity .55s var(--ease-out) .1s, transform .8s var(--ease-spring) .1s, filter .55s var(--ease-out) .1s;
+}
+/* Found: one soft ring goes out from the picture as it pops up. */
+.dial-wrap.is-revealed::after {
+  content: "";
+  position: absolute;
+  inset: 17%;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 3px var(--blue);
+  animation: reveal-ring .9s var(--ease-out) .15s both;
+}
+@keyframes reveal-ring {
+  from { opacity: .75; transform: scale(.85); }
+  to { opacity: 0; transform: scale(1.38); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dial-wrap.is-revealed::after { animation: none; opacity: 0; }
+  .reveal { transform: none; }
 }
 /* The glass edge over the picture: light catches the top, shade gathers at the bottom. */
 .reveal::after {
@@ -579,7 +597,7 @@ button.primary.start {
     linear-gradient(160deg, color-mix(in srgb, var(--tint) 74%, #fff), var(--tint) 52%, color-mix(in srgb, var(--tint) 66%, #000));
 }
 .reveal-initials {
-  font-size: min(27vw, 108px);
+  font-size: min(19vw, 76px);
   font-weight: 700;
   letter-spacing: -.02em;
   line-height: 1;
@@ -635,7 +653,7 @@ button.primary.start {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 1.24rem;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -.02em;
 }
