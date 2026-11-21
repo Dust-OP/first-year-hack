@@ -247,8 +247,11 @@ const linkedinLink = (person, text = 'View LinkedIn profile') =>
 /** Buttons for one person, by where the two of you stand. */
 function actions(person, relation, requestId) {
   const act = (fn) => async (e) => {
-    e.currentTarget.disabled = true;
-    try { await fn(); } catch (ex) { alert(ex.message); }
+    // Keep the button: e.currentTarget is gone after the await. On failure give it back, or the card
+    // (rebuilt only when something visible changes) would leave it disabled for good.
+    const button = e.currentTarget;
+    button.disabled = true;
+    try { await fn(); } catch (ex) { alert(ex.message); button.disabled = false; }
     sync();
   };
   if (relation === 'connected') {
