@@ -8,7 +8,7 @@
 //   showing your profile and direction to people nearby. The notice offers to change your mind.
 // - Bump REVISION whenever privacy.html changes in substance, and everyone is asked again.
 (() => {
-  const REVISION = 2; // 2: pictures are shown to people nearby; sign-in with LinkedIn (21 Nov 2026)
+  const REVISION = 3; // 2: pictures are shown to people nearby; sign-in with LinkedIn (21 Nov 2026). 3: the live site stores data in Neon Postgres (21 Nov 2026)
   // On the privacy notice itself, don't block the page: people must be able to read it first.
   const onPrivacyPage = /privacy\.html$/.test(location.pathname);
   const CC = window.CookieConsent;
@@ -131,7 +131,7 @@
                 description:
                   'Your profile (name, picture, what you do, LinkedIn link, what you offer and seek), and the direction and distance to you, ' +
                   'are shown to people within 500 m who have the app open. ' +
-                  'Your latest position is stored in Snowflake (London region) and replaced each time it updates; ' +
+                  'Your latest position is stored in the app’s database in London and replaced each time it updates; ' +
                   '“Go invisible” removes it; signing out or closing the page asks the server to remove it. The compass needs this to work.',
                 linkedCategory: 'nearby',
               },
