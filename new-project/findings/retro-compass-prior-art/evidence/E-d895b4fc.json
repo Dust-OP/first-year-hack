@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:23:09.566Z",
+  "source": {
+    "url": "https://github.com/modem-works/terra",
+    "title": "Terra AI compass: GPL-3.0, last push 2024-03-27, issues show no intention input, stuck Pending (33 comments), no demo video (checked by main agent via gh)",
+    "body": "Terra AI compass: GPL-3.0, last push 2024-03-27, issues show no intention input, stuck Pending (33 comments), no demo video (checked by main agent via gh)"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

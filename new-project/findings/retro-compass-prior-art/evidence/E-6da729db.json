@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:23:09.510Z",
+  "source": {
+    "url": "https://devpost.com/software/x-marks-the-spot-agbuiy",
+    "title": "Closest prior art: ESP32 compass + Gemini picks destination, XHacks 2026 past-meets-future theme, no prize listed (page checked by main agent)",
+    "body": "Closest prior art: ESP32 compass + Gemini picks destination, XHacks 2026 past-meets-future theme, no prize listed (page checked by main agent)"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

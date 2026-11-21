@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:23:09.594Z",
+  "source": {
+    "url": "https://docs.snowflake.com/en/sql-reference/functions/st_azimuth",
+    "title": "ST_AZIMUTH returns REAL azimuth in radians between two Points; usable as compass bearing",
+    "body": "ST_AZIMUTH returns REAL azimuth in radians between two Points; usable as compass bearing"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

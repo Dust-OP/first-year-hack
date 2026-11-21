@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:36:01.367Z",
+  "source": {
+    "url": "https://news.ycombinator.com/item?id=9008213",
+    "title": "Community: web compass dial praised for looks; complaints were iOS inverted/landscape axis bugs (worker thread read).",
+    "body": "Community: web compass dial praised for looks; complaints were iOS inverted/landscape axis bugs (worker thread read)."
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

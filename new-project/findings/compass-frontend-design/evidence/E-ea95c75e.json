@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:36:01.395Z",
+  "source": {
+    "url": "https://github.com/w3c/deviceorientation/issues/137",
+    "title": "WebKit lacks deviceorientationabsolute; use webkitCompassHeading on iOS (worker-reported, community-reception.md).",
+    "body": "WebKit lacks deviceorientationabsolute; use webkitCompassHeading on iOS (worker-reported, community-reception.md)."
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

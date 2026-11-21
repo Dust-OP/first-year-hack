@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:23:09.538Z",
+  "source": {
+    "url": "https://devpost.com/software/team-afk",
+    "title": "Indoor phone compass bent >100 deg by concrete walls; team pivoted (page checked by main agent)",
+    "body": "Indoor phone compass bent >100 deg by concrete walls; team pivoted (page checked by main agent)"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

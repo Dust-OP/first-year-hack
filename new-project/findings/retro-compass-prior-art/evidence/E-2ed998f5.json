@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:24:11.663Z",
+  "source": {
+    "url": "https://www.youtube.com/watch?v=1QNsdr-Qx_I",
+    "title": "OpenAI 'Introducing GPT-6 Astra' 2026-09-03, 163 s; opens 1979 archive room -> 2026 remake of same shot, yellow-circle motif (metadata + frame sheet checked by ",
+    "body": "OpenAI 'Introducing GPT-6 Astra' 2026-09-03, 163 s; opens 1979 archive room -> 2026 remake of same shot, yellow-circle motif (metadata + frame sheet checked by main agent)"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

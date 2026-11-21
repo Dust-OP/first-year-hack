@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:23:09.453Z",
+  "source": {
+    "url": "https://luma.com/firstyearhack",
+    "title": "FirstYearHack 2026 by KCL Tech: 21 Nov 2026 Bush House, teams of 3, tracks/prizes revealed on the day, 6pm submissions; no public rules page",
+    "body": "FirstYearHack 2026 by KCL Tech: 21 Nov 2026 Bush House, teams of 3, tracks/prizes revealed on the day, 6pm submissions; no public rules page"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:36:01.338Z",
+  "source": {
+    "url": "https://github.com/KilledByAPixel/Cosmodial/blob/630c928/js/ui/gyro.js",
+    "title": "Reference heading input: iOS requestPermission gate, deviceorientationabsolute preferred once real samples arrive, webkitCompassHeading, screen.orientation.angl",
+    "body": "Reference heading input: iOS requestPermission gate, deviceorientationabsolute preferred once real samples arrive, webkitCompassHeading, screen.orientation.angle, lerpAngle shortest path (line 55). MIT. Spot-checked by main agent via gh api 2026-11-21."
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}

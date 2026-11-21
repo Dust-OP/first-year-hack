@@ -1,0 +1,21 @@
+{
+  "status": "noted",
+  "observed_at": "2026-11-21T11:23:09.482Z",
+  "source": {
+    "url": "https://hacklondon-2026.devpost.com/rules",
+    "title": "KCL Tech precedent: each team selects exactly one main track; sponsor prizes stacked (OrbitGuard) — inference for FYH 2026",
+    "body": "KCL Tech precedent: each team selects exactly one main track; sponsor prizes stacked (OrbitGuard) — inference for FYH 2026"
+  },
+  "comments": [],
+  "leads": [],
+  "coverage": {
+    "kind": "agent note",
+    "original_excerpt_chars": 0,
+    "excerpt_chars": 0,
+    "truncated": false,
+    "raw_excerpt_path": null,
+    "excludes": [
+      "Anything the agent did not quote or summarise"
+    ]
+  }
+}
