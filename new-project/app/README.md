@@ -41,7 +41,7 @@ cloudflared tunnel --url http://localhost:3000
 | Sign-up, nearby people, bearing and distance, invite, accept, decline, LinkedIn link | Works. Checked in a real browser with two simulated phones 120 m apart, and by `npm test` |
 | Email sign-in through Logto | Written and checked in a browser against a **local stand-in** for Logto (`npm run mock-signin`). **Not yet run against the real Logto**: that needs the App ID |
 | Compass heading from the phone sensor | Written, **not yet run on a phone**. The headless test browser has no sensor, so only the drag-to-turn path was exercised |
-| Snowflake as the database | Written, **not yet run**: there was no Snowflake account on the build machine. The app uses an in-memory store until `.env` is filled in |
+| Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
 
 ### Sign-in (Logto)
@@ -93,7 +93,9 @@ To switch it on:
 3. `npm run snowflake:check`. It logs in as the app role and compares Snowflake's bearing and distance with our own maths for Bush House → Big Ben.
 4. `npm start`. The first line printed says `store: snowflake`.
 
-Each compass tick is two or three statements. Expect it to feel slower than the in-memory store, and several seconds on the first call while the warehouse wakes up. If it is too slow on the day, demo on the in-memory store and show the Snowflake query separately.
+Each compass tick is four to six statements: the session lookup, the position MERGE, the nearby query and the invitations query side by side, then one or two profile lookups once you have invitations. Measured on 21 Nov: about 1.2 s per tick with the warehouse awake (the nearby query itself about 0.3 s), against a 3 s polling interval. The first call after the warehouse has slept takes longer. If it feels slow on the day, demo on the in-memory store: stop the server and run `SNOWFLAKE_ACCOUNT= npm start` (the empty value wins over `.env`; the first line then says `store: memory`). Everyone signs up again, because that store starts empty. Show the Snowflake query separately.
+
+The app role cannot delete users, so the two check accounts from that run ("Check Run A" and "Check Run B") and one invitation between them remain in the tables. They have no position, so they never appear on a compass.
 
 ## Files
 
@@ -116,6 +118,5 @@ Each compass tick is two or three statements. Expect it to feel slower than the 
 
 1. Create the Logto application, set `LOGTO_APP_ID` and sign in once with a real email to confirm the code arrives.
 1. Try it on one iPhone and one Android phone over HTTPS, outdoors. Record what the heading does.
-2. Get a Snowflake account and run `npm run snowflake:check`.
 3. Drop in the designed dial from the front-end session.
 4. Pick the real name.

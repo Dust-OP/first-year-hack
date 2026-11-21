@@ -1,5 +1,5 @@
 -- =====================================================================
--- Career Compass: Snowflake setup. NOT YET RUN on any account.
+-- Career Compass: Snowflake setup. Run on the team's trial account on 21 Nov 2026 (with the public key filled in).
 -- Run section by section in a Snowsight worksheet as a user who holds
 -- ACCOUNTADMIN. Role design and the reasoning for each grant come from
 -- ../../findings/snowflake-real-projects/roles-and-setup.md (section 6).

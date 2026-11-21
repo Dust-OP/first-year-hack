@@ -8,7 +8,7 @@ This file describes this project only. It does not replace any agent's own globa
 - **Event:** KCL First Year Hackathon 2026, **Track 2: Retro Remix**. The theme is reinventing the compass.
 - **Team:** see the repository root [`README.md`](../README.md).
 - **Concept (decided 21 Nov):** a compass that points at nearby people worth working with. Point at someone to see their profile, send an in-app invitation, and after they accept both sides open the other's LinkedIn profile.
-- **Stage:** demo v1 built in [`app/`](app/) (working title "Career Compass"). The final name is not chosen. Not yet run on a real phone or against Snowflake; see [`app/README.md`](app/README.md).
+- **Stage:** demo v1 built in [`app/`](app/) (working title "Career Compass"). The final name is not chosen. Not yet run on a real phone. The Snowflake store was run on the team's account on 21 Nov; see [`app/README.md`](app/README.md).
 - **Technical direction from research, adopted in demo v1:**
   - A phone web app.
   - An SVG compass dial rotated with CSS transforms.
@@ -81,4 +81,4 @@ first-year-hack/                  repository root
 - **Reddit opinion on compass UI designs** has not been read; automated access was blocked. A teammate should check it in a normal browser and add it to `findings/compass-frontend-design/`.
 - **Event rules on track and prize stacking** are unconfirmed. Ask the organisers; the question text is in `findings/retro-compass-prior-art/rules-snowflake.md`.
 - **The app has not been run on a phone yet.** First check: open `app/` over HTTPS on one iPhone and one Android phone, outdoors, and record what the heading does.
-- **The Snowflake path has not been run.** Needs an account; then `npm run snowflake:check` in `app/`.
+- **Snowflake works on the team's account** (checked 21 Nov): `npm run snowflake:check` passes and the full flow ran on the Snowflake store. The account settings live in the untracked `app/.env`.
