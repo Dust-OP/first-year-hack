@@ -92,6 +92,9 @@ export function createSnowflakeStore(client) {
     last,
 
     async createUser(u) {
+      // No UNIQUE in Snowflake: look first, so a repeat sign-in does not make a second row.
+      const existing = u.sub ? await this.getUserBySub(u.sub) : null;
+      if (existing) return existing;
       await q(
         `INSERT INTO USERS (ID, LOGTO_SUB, EMAIL, TOKEN_HASH, NAME, HEADLINE, LINKEDIN_URL, OFFERS, SEEKS, IS_DEMO, CREATED_MS)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -106,6 +109,21 @@ export function createSnowflakeStore(client) {
     async getUserBySub(sub) {
       const rows = await q(`SELECT ${USER_COLS} FROM USERS WHERE LOGTO_SUB = ? LIMIT 1`, [sub]);
       return rows[0] ? toUser(rows[0]) : null;
+    },
+    /**
+     * See store-memory.mjs. Snowflake does not enforce UNIQUE, so unlike Postgres two sign-ins
+     * racing for the same identity could still make two rows here; Snowflake is the laptop store.
+     */
+    async findUserByEmail(email) {
+      const own = await q(`SELECT ${USER_COLS} FROM USERS WHERE NOT IS_DEMO AND LOWER(EMAIL) = ? ORDER BY CREATED_MS LIMIT 1`, [email]);
+      if (own[0]) return toUser(own[0]);
+      const viaLinkedin = await extra(() => q(
+        `SELECT ${USER_COLS.split(', ').map((c) => 'u.' + c).join(', ')} FROM USERS u JOIN LINKEDIN_PROFILES l ON l.USER_ID = u.ID
+         WHERE NOT u.IS_DEMO AND l.EMAIL_VERIFIED AND LOWER(l.EMAIL) = ? ORDER BY u.CREATED_MS LIMIT 1`, [email]), []);
+      return viaLinkedin[0] ? toUser(viaLinkedin[0]) : null;
+    },
+    async setUserEmail(id, email) {
+      await q(`UPDATE USERS SET EMAIL = ? WHERE ID = ?`, [email, id]);
     },
     async setUserToken(id, tokenHash) {
       await q(`UPDATE USERS SET TOKEN_HASH = ? WHERE ID = ?`, [tokenHash, id]);

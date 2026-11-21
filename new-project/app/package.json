@@ -15,7 +15,8 @@
     "mock-signin": "node dev/mock-oidc.mjs",
     "mock-linkedin": "node dev/mock-linkedin.mjs",
     "snowflake:check": "node snowflake/check.mjs",
-    "db:check": "node postgres/check.mjs"
+    "db:check": "node postgres/check.mjs",
+    "users": "node postgres/users.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0"

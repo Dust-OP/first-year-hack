@@ -590,10 +590,11 @@ function row(item, relation) {
   );
 }
 
-/** For someone who signed in with LinkedIn: what we keep from LinkedIn, and the button that deletes it. */
+/** For someone who signed in with LinkedIn (on this account at any time): what we keep from LinkedIn, and the button that deletes it. */
 async function renderLinkedinData() {
-  if (state.me?.signedInWith !== 'linkedin') return;
-  const { profile } = await api('GET', '/api/linkedin/me');
+  if (!state.me) return;
+  const { profile, linkedin } = await api('GET', '/api/linkedin/me');
+  if (!linkedin && $('linkedin-data').hidden) return;
   const when = (ms) => new Date(ms).toLocaleString();
   $('linkedin-data').hidden = false;
   $('linkedin-record').replaceChildren(profile

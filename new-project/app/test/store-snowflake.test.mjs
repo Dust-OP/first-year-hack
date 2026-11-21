@@ -29,6 +29,8 @@ function accountWithoutNewTables(refusal = (name) => `Snowflake 422: SQL compila
     }
     if (/FROM USERS WHERE TOKEN_HASH = \?/.test(s)) return users.filter((u) => u.TOKEN_HASH === p[0]).map(row);
     if (/FROM USERS WHERE LOGTO_SUB = \?/.test(s)) return users.filter((u) => u.LOGTO_SUB === p[0]).map(row);
+    if (/FROM USERS WHERE NOT IS_DEMO AND LOWER\(EMAIL\) = \?/.test(s)) return users.filter((u) => !u.IS_DEMO && u.EMAIL?.toLowerCase() === p[0]).map(row);
+    if (s.startsWith('UPDATE USERS SET EMAIL')) { users.find((u) => u.ID === p[1]).EMAIL = p[0]; return []; }
     if (/FROM USERS WHERE ID IN/.test(s) || /^SELECT NAME FROM USERS WHERE ID = \?/.test(s)) return users.filter((u) => p.includes(u.ID)).map(row);
     if (s.startsWith('UPDATE USERS SET TOKEN_HASH')) { users.find((u) => u.ID === p[1]).TOKEN_HASH = p[0]; return []; }
     if (s.startsWith('UPDATE USERS SET NAME')) {
@@ -103,7 +105,7 @@ test('Snowflake store on an account without the LinkedIn and photo tables: the a
 
   // Pictures fall back to generated initials; the LinkedIn routes answer without failing.
   for (const [who, initials] of [[a, 'AL'], [b, 'BO']]) assert.match((await call()('GET', who.body.me.picture)).body, new RegExp(`>${initials}</text>`));
-  assert.deepEqual((await ben('GET', '/api/linkedin/me')).body, { profile: null });
+  assert.deepEqual((await ben('GET', '/api/linkedin/me')).body, { profile: null, linkedin: true });
   assert.equal((await ben('POST', '/api/linkedin/forget')).status, 200);
 
   // Found out once, said once, and never asked again.

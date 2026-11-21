@@ -15,7 +15,9 @@ export function createMemoryStore() {
   return {
     kind: 'memory',
 
+    /** A sign-in identity has one account: if `user.sub` already has one, that account is returned instead. */
     async createUser(user) {
+      if (user.sub && bySub.has(user.sub)) return users.get(bySub.get(user.sub));
       users.set(user.id, user);
       if (user.tokenHash) byToken.set(user.tokenHash, user.id);
       if (user.sub) bySub.set(user.sub, user.id);
@@ -23,6 +25,22 @@ export function createMemoryStore() {
     },
     async getUserBySub(sub) {
       return users.get(bySub.get(sub)) ?? null;
+    },
+    /**
+     * The account an email address already belongs to, so one person signing in another way
+     * (LinkedIn after an emailed code, or the reverse) gets the same account back. `email` is
+     * normalised (trimmed, lower case). Matches the address on the account, or the address in its
+     * LinkedIn record when LinkedIn says it is verified. Demo bots never match. Oldest account first.
+     */
+    async findUserByEmail(email) {
+      // A Map keeps insertion order, so the first hit is the oldest account.
+      const li = (u) => linkedinProfiles.get(u.id);
+      return [...users.values()].find((u) => !u.demo && (
+        u.email?.toLowerCase() === email || (li(u)?.emailVerified === true && li(u).email?.toLowerCase() === email))) ?? null;
+    },
+    async setUserEmail(id, email) {
+      const u = users.get(id);
+      if (u) u.email = email;
     },
     /** A new sign-in replaces the previous session token. */
     async setUserToken(id, tokenHash) {

@@ -7,6 +7,7 @@
 
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { avatarUrl, initialsSvg, photoBytes, pictureExpired, readPhoto } from './avatar.mjs';
+import { normEmail } from './email-code.mjs';
 import { offset } from './geo.mjs';
 import { matchScore, normTags } from './match.mjs';
 
@@ -87,6 +88,30 @@ const DEMO_PEOPLE = [
 export function createApi({ store, demo = false, now = () => Date.now(), logto = null, verifyIdToken = null, linkedin = null, publicUrl = null, emailCode = null }) {
   // The quick sign-up has no email check. Once real sign-in is on, keep it only for demos.
   const quickSignup = (!logto && !linkedin && !emailCode) || demo;
+
+  /**
+   * The one account for a sign-in, made on the first visit. A repeat sign-in finds it by its
+   * identity (`sub`). A verified email address also finds the account the same person made with
+   * another sign-in (LinkedIn after an emailed code, or the reverse), so each person is recorded
+   * once. An address that is not verified never joins two accounts.
+   * @param keepEmail  the address goes on the account row (email sign-ins; never LinkedIn's)
+   */
+  async function accountFor({ sub, verifiedEmail = null, keepEmail = null, name }) {
+    let user = await store.getUserBySub(sub);
+    if (!user && verifiedEmail) user = await store.findUserByEmail(verifiedEmail);
+    if (!user) {
+      // First visit: an account with no profile yet. It stays off every compass until the profile is filled in.
+      user = await store.createUser({
+        id: randomUUID(), sub, email: keepEmail, tokenHash: null,
+        name, headline: '', linkedin: null, offers: [], seeks: [], demo: false,
+      });
+    } else if (keepEmail && !user.email) {
+      await store.setUserEmail(user.id, keepEmail);
+      user = { ...user, email: keepEmail };
+    }
+    return user;
+  }
+  const verified = (email, isVerified) => (isVerified === true ? normEmail(email) : null);
   // One-time codes that hand a finished LinkedIn sign-in over to the page. Kept in memory: one server process.
   const handoffs = new Map(); // code -> { userId, expiresMs, state }
   const originOf = (request) => (publicUrl || new URL(request.url).origin).replace(/\/+$/, '');
@@ -231,17 +256,13 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
         console.error('[linkedin]', err.message);
         return back('linkedin_error', /did not accept the sign-in/.test(err.message) ? 'refused' : /did not return a profile/.test(err.message) ? 'no_profile' : 'failed');
       }
-      let user = await store.getUserBySub(LINKEDIN_SUB + member.sub);
-      if (!user) {
-        // First visit: an account with no profile yet. LinkedIn does not tell us the person's profile
-        // address, so they add it on the profile form and stay off every compass until then.
-        // Their email is kept in the LinkedIn record only.
-        user = await store.createUser({
-          id: randomUUID(), sub: LINKEDIN_SUB + member.sub, email: null, tokenHash: null,
-          name: clean(member.name || [member.givenName, member.familyName].filter(Boolean).join(' '), 60) || 'LinkedIn member',
-          headline: '', linkedin: null, offers: [], seeks: [], demo: false,
-        });
-      }
+      // LinkedIn does not tell us the person's profile address, so a new account adds it on the
+      // profile form and stays off every compass until then. Their LinkedIn email is kept in the
+      // LinkedIn record only; it is used here just to find an account they already have.
+      const user = await accountFor({
+        sub: LINKEDIN_SUB + member.sub, verifiedEmail: verified(member.email, member.emailVerified),
+        name: clean(member.name || [member.givenName, member.familyName].filter(Boolean).join(' '), 60) || 'LinkedIn member',
+      });
       // Recorded now, while the person is signing in. It is never refreshed on a schedule.
       await extra('the LinkedIn record', () => store.saveLinkedinProfile(user.id, { ...member, profileUrl: user.linkedin ?? null }, now()));
 
@@ -275,7 +296,10 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     'GET /api/linkedin/me': async (request) => {
       const me = await auth(request);
       if (!me) return fail(401, 'Not signed in.');
-      return json({ profile: signedInWith(me) === 'linkedin' ? await store.getLinkedinProfile(me.id) : null });
+      // An account found by its email from a LinkedIn sign-in carries a LinkedIn record without
+      // being a LinkedIn account, so the record is shown to whoever holds one.
+      const profile = await store.getLinkedinProfile(me.id);
+      return json({ profile, linkedin: signedInWith(me) === 'linkedin' || Boolean(profile) });
     },
     'POST /api/linkedin/forget': async (request) => {
       const me = await auth(request);
@@ -305,16 +329,10 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       if (!emailCode) return fail(404, 'Email sign-in is not set up on this server.');
       const { code } = await readBody(request);
       const email = await emailCode.verify({ browserKey: codeKeyOf(request), code });
+      // The code proved the address, so it also finds an account made with LinkedIn under it.
+      const user = await accountFor({ sub: EMAIL_SUB + email, verifiedEmail: email, keepEmail: email, name: clean(email.split('@')[0], 60) });
       const token = newToken();
-      let user = await store.getUserBySub(EMAIL_SUB + email);
-      if (user) {
-        await store.setUserToken(user.id, sha(token));
-      } else {
-        user = await store.createUser({
-          id: randomUUID(), sub: EMAIL_SUB + email, email, tokenHash: sha(token),
-          name: clean(email.split('@')[0], 60), headline: '', linkedin: null, offers: [], seeks: [], demo: false,
-        });
-      }
+      await store.setUserToken(user.id, sha(token));
       const res = json({ token, me: self(user) });
       res.headers.set('Set-Cookie', CLEAR_CODE);
       return res;
@@ -330,19 +348,15 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       } catch (err) {
         return fail(401, `Sign-in could not be verified (${err.message}).`);
       }
+      // Only an address Logto has verified goes on the account: an account's address is what
+      // later sign-ins trust to find it. (Logto's email sign-in always verifies it.)
+      const email = verified(claims.email, claims.email_verified);
+      const user = await accountFor({
+        sub: claims.sub, verifiedEmail: email, keepEmail: email,
+        name: clean(claims.name || claims.username || (clean(claims.email, 200) ?? '').split('@')[0], 60),
+      });
       const token = newToken();
-      let user = await store.getUserBySub(claims.sub);
-      if (user) {
-        await store.setUserToken(user.id, sha(token));
-      } else {
-        // First visit: an account with no profile yet. It stays off every compass until the profile is filled in.
-        const email = clean(claims.email, 200) || null;
-        user = await store.createUser({
-          id: randomUUID(), sub: claims.sub, email, tokenHash: sha(token),
-          name: clean(claims.name || claims.username || (email ?? '').split('@')[0], 60),
-          headline: '', linkedin: null, offers: [], seeks: [], demo: false,
-        });
-      }
+      await store.setUserToken(user.id, sha(token));
       return json({ token, me: self(user) });
     },
 
@@ -353,7 +367,7 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
       if (p.error) return fail(400, p.error);
       const saved = await store.updateUser(me.id, p.fields);
       if (p.photo !== undefined) await extra('the picked photo', () => store.setPhoto(me.id, p.photo));
-      if (signedInWith(me) === 'linkedin') await extra('the profile address in the LinkedIn record', () => store.setLinkedinProfileUrl(me.id, p.fields.linkedin));
+      await extra('the profile address in the LinkedIn record', () => store.setLinkedinProfileUrl(me.id, p.fields.linkedin));
       return json({ me: self(saved, p.photo !== undefined ? now() : undefined) });
     },
 

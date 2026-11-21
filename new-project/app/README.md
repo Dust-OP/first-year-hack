@@ -21,7 +21,7 @@ Built 21 Nov 2026. Node 20+. Locally it runs with no install; the one dependency
 cd new-project/app
 npm start          # http://localhost:3000
 npm run phones     # the same server behind an https address, with a QR code, for real phones
-npm test           # 20 tests: bearings, invite/accept/decline, demo bots, email sign-in, LinkedIn sign-in and its
+npm test           # 37 tests: one account per person, bearings, invite/accept/decline, demo bots, email sign-in, LinkedIn sign-in and its
                    #           error messages, pictures, the privacy boundary, bad requests to the server,
                    #           Snowflake store without the new tables, QR code
 ```
@@ -199,7 +199,7 @@ This has not been done. A test browser stands in for the phones' GPS, not for th
 
 ### Privacy choices already in the code
 
-- **Consent on first open.** A dialog (`public/consent.js`) blocks the page until the visitor agrees or declines; declining keeps the app closed, and withdrawing later removes the position. The privacy notice (`public/privacy.html`) is linked from the dialog, the sign-up form and *Demo tools*, and describes what this code stores, including LinkedIn sign-in, pictures and the state of the two extra Snowflake tables. It has had no legal review. When the notice changes in substance, bump `REVISION` in `consent.js` so that everyone is asked again (now 2).
+- **Consent on first open.** A dialog (`public/consent.js`) blocks the page until the visitor agrees or declines; declining keeps the app closed, and withdrawing later removes the position. The privacy notice (`public/privacy.html`) is linked from the dialog, the sign-up form and *Demo tools*, and describes what this code stores, including LinkedIn sign-in, pictures and the state of the two extra Snowflake tables. It has had no legal review. When the notice changes in substance, bump `REVISION` in `consent.js` so that everyone is asked again (now 5).
 - Another person's coordinates never leave the server. Clients get a bearing and a distance only.
 - Only the latest position is stored, and it stops counting after 45 seconds. *Go invisible*, signing out, closing the page or losing your position removes it at once.
 - Nobody is placed at a made-up position. Without a position a person is on no compass; the Bush House demo position is used only by someone who taps its button.
@@ -207,6 +207,8 @@ This has not been done. A test browser stands in for the phones' GPS, not for th
 - The app keeps a random session token on the device and the server stores only its hash. There are no passwords. Your email address is never shown to other users.
 - **What other people receive about you** is: a random id, your name, what you do, your LinkedIn address, your tags (and how they match theirs), your picture, and your direction and distance. A test pins that list of fields. What LinkedIn told us (its id for you, your email, locale, picture link and the raw answer) stays on the server and is shown only to you.
 - A LinkedIn email is kept in the LinkedIn record only, not in the app's user row.
+- **One account per person.** Signing in again with the same method finds the same account (by its sign-in id, which Postgres keeps unique; two sign-ins racing for one id get the same account, not an error). A verified email address also joins methods: an emailed code finds an account whose LinkedIn record has that address marked verified by LinkedIn, and a LinkedIn sign-in with a verified address finds the account an emailed code made for it. Such an account then keeps the address the code proved, so deleting the LinkedIn data does not split it later. An unverified address never joins accounts, and demo bots never match. Tests: `test/one-record.test.mjs`.
+- **Test accounts are not people.** Quick sign-ups (no sign-in behind them) and demo bots are test accounts. `npm run users` (read-only, needs `DATABASE_URL`) counts people as accounts with a real sign-in and lists the test accounts on a line of their own. On the live site, set `DEMO=0` once a real sign-in is switched on: that removes the quick sign-up and the demo bots, so no new test accounts are made there.
 - **Delete my LinkedIn data** (People tab) deletes the LinkedIn record: LinkedIn's id, names, email, picture link, locale, the typed profile address and the raw answer held in it. It does not delete the account, the profile (name included), a picked photo, invitations, or the sign-in id `linkedin|<sub>` in the user row, which is what lets the person sign in again.
 - **The picture route asks for no sign-in.** Anyone who has been shown a person's picture address (`/api/avatar?id=<their id>`) can load that person's current picture later, including after they go invisible. It gives a face or initials, never a position or an email.
 - A picked photo is stored as it was sent (a 256 px JPEG made in the browser; the original file is not uploaded). The API can replace or remove it (`POST /api/profile` with `photo`), but the page shows the profile form only once, so there is no way in the page yet to change or remove a photo afterwards. There is no delete-account route, and none is planned.
@@ -228,6 +230,7 @@ vercel integration add neon --name career-compass-db --meta region=lhr1
 vercel env pull .env.local        # DATABASE_URL for local checks; .env.local is git-ignored
 npm install
 npm run db:check                  # full flow in a throwaway schema, then drops it
+npm run users                     # read-only: people with a real sign-in, and test accounts apart
 vercel env add DEMO production    # value 1 keeps the demo button and quick sign-up
 vercel deploy --prod
 ```
@@ -268,7 +271,7 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 | `server.mjs` | Local server: static files plus the API |
 | `api/index.mjs`, `vercel.json`, `.vercelignore` | Vercel entry point and config |
 | `lib/setup.mjs` | Picks the store and sign-in from environment variables; shared by both entry points |
-| `lib/store-postgres.mjs`, `postgres/check.mjs` | Postgres store (Neon on Vercel) and its one-command check |
+| `lib/store-postgres.mjs`, `postgres/check.mjs`, `postgres/users.mjs` | Postgres store (Neon on Vercel), its one-command check, and the read-only count of people (test accounts apart) |
 | `lib/api.mjs` | All API routes as one `(Request) => Response` function |
 | `lib/email-code.mjs`, `lib/email-code-postgres.mjs`, `lib/mailer.mjs`, `public/email-code.js` | Sign-in with an emailed code: codes and limits, sending through Resend, the email and code form |
 | `lib/logto.mjs`, `public/auth.js` | Email sign-in: server-side ID token check, browser-side OpenID Connect flow |
