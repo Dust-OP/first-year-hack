@@ -62,13 +62,15 @@ const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')
  *    heading is that edge's direction on the ground. For a flat phone this is 360 - alpha.
  *  - Held upright like a camera: the top edge points at the sky and says nothing, so the heading
  *    is where the back of the phone faces. This is the `compassHeading` example in the spec.
- *  - In between (flatUntilDeg..uprightFromDeg of lift) the two are blended. With no sideways roll
- *    they agree exactly, so the hand-over is seamless.
+ *  - In between (flatUntilDeg..uprightFromDeg of lift, 65 to 80 degrees in tuning.js) the two are
+ *    blended. With no sideways roll they agree exactly, so the hand-over is seamless. With a roll
+ *    they differ, because the back of the phone turns with the wrist: below flatUntilDeg a roll
+ *    does not move the heading at all, above it the heading starts to follow the wrist.
  *  - screenAngle (screen.orientation.angle) picks which edge is "top" as the user sees the page.
  *
- * Limit: leaning an upright phone back past vertical by about 30 degrees flips the answer by 180,
- * because the top edge then points behind the user. No formula avoids a flip somewhere; this puts
- * it where nobody holds a phone.
+ * Limit: leaning an upright phone back past vertical by about 21 degrees (with 65 and 80) flips
+ * the answer by 180, because the top edge then points behind the user. No formula avoids a flip
+ * somewhere; this puts it where nobody holds a phone.
  */
 export function headingFromEuler(alpha, beta, gamma, screenAngle = 0, tuning = TUNING.sensor) {
   if (!Number.isFinite(alpha)) return null;

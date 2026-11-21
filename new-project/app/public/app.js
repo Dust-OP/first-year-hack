@@ -138,7 +138,7 @@ function renderHint() {
   if (q === 'invalid' && heading.source !== 'denied') text = 'The compass has no reading yet. Move the phone in a figure of eight, away from metal.';
   else if (heading.source !== 'sensor') text = '';
   else if (q === 'poor') text = `The compass is unsure${reading?.accuracy > 0 ? ` (about ±${Math.round(reading.accuracy)}°)` : ''}. Move the phone in a figure of eight, away from metal. If it stays off, use “Turn by hand” under Demo tools.`;
-  else if (q === 'paused') text = 'The compass sensor has stopped reporting. The dial shows its last reading.';
+  else if (q === 'paused') text = 'The compass sensor has stopped reporting. The dial shows its last reading. If it stays stuck, use “Turn by hand” under Demo tools.';
   $('hint-text').textContent = text;
   $('hint').hidden = !text;
 }
@@ -236,8 +236,9 @@ $('start').addEventListener('click', async () => {
     if (!pointer || e.pointerId !== pointer.id) return;
     const { angle, out } = around(e);
     if (!pointer.engaged) {
-      // A tap wobbles by a few pixels: that must not turn the dial or count as a drag.
-      if (Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y) < 5) return;
+      // A tap wobbles by a few pixels, and a finger slides more than a mouse: under 10 px it is
+      // still a tap, and must not turn the dial or count as a drag.
+      if (Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y) < 10) return;
       pointer.engaged = dragged = true;
       if (pointer.held) wrap.classList.add('is-grabbed');
     }

@@ -51,8 +51,10 @@ export const TUNING = {
     waitMs: 2500, // no reading after this long: turn by hand instead
     // Which way is the user pointing? Lying flat it is the top edge of the phone; held upright
     // it is the back of the phone. Between these two tilts the two answers are blended.
-    flatUntilDeg: 50,
-    uprightFromDeg: 75,
+    // The back of the phone turns with the wrist, so the blend starts above the 20 to 60 degrees
+    // at which a phone is normally held: up to flatUntilDeg a sideways roll does not move the heading.
+    flatUntilDeg: 65,
+    uprightFromDeg: 80,
     poorAccuracyDeg: 30, // iPhone reports its own uncertainty: above this, ask to calibrate
     goodAccuracyDeg: 22, // ...and below this the hint goes away again
     qualityHoldMs: 800, // a change of quality must last this long before the hint changes

@@ -59,10 +59,12 @@ export function createLockOn({ captureDeg = 15, releaseDeg = 28, dwellMs = 400, 
       if (next !== aimedId) { aimedId = next; dwell = 0; spent = false; }
       else if (aimedId !== null) dwell = Math.abs(rate) <= steadyRate ? dwell + dtMs : 0;
 
-      // 2. A dismissed person is allowed back once the aim has clearly left them.
+      // 2. A dismissed person is allowed back once the aim has clearly left them. While they are not
+      // in the list (the compass is off screen, or they are gone) the aim is unknown and the block
+      // stays: it names one person only, so it never holds anyone else back.
       if (blockedId !== null) {
         const b = people.find((p) => p.id === blockedId);
-        if (!b || Math.abs(angleDiff(heading, b.bearing)) > releaseDeg) blockedId = null;
+        if (b && Math.abs(angleDiff(heading, b.bearing)) > releaseDeg) blockedId = null;
       }
 
       // 3. A steady aim becomes a lock.
