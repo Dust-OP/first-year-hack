@@ -172,6 +172,20 @@ test('everyone the API returns has a picture an <img> can load; email is never s
   for (const p of [...benView.nearby, ...adaView.nearby]) assert.equal(p.email, undefined);
   assert.doesNotMatch(JSON.stringify(benView), /ada@example\.com/, "Ada's LinkedIn email never reaches Ben");
 
+  // The privacy boundary, on what a stranger receives about someone who signed in with LinkedIn:
+  // her profile in the app, where she is relative to him, and `picture`. `picture` is the only new field.
+  const stranger = benView.nearby.find((p) => p.id === a.me.id);
+  assert.deepEqual(Object.keys(stranger).sort(), [
+    'bearing', 'demo', 'distanceM', 'headline', 'helpsMe', 'iHelp', 'id', 'linkedin', 'name', 'offers', 'picture', 'relation', 'requestId', 'score', 'seeks', 'spreadDeg',
+  ]);
+  assert.deepEqual(Object.keys(benView.outgoing[0].person).sort(), ['demo', 'headline', 'helpsMe', 'iHelp', 'id', 'linkedin', 'name', 'offers', 'picture', 'score', 'seeks']);
+  // Nothing LinkedIn told us is in it: not her LinkedIn id, email, locale, name parts or raw claims.
+  const kept = await store.getLinkedinProfile(a.me.id);
+  assert.ok(kept.sub && kept.email && kept.locale && kept.claims.given_name);
+  for (const secret of [kept.sub, kept.email, kept.locale, kept.picture, 'email_verified', 'given_name', 'claims', 'linkedin|', 'signedInWith']) {
+    assert.equal(JSON.stringify(benView).includes(secret), false, `"${secret}" must not reach another user`);
+  }
+
   // A demo bot: generated initials, never a photo.
   const bot = benView.nearby.find((p) => p.name === 'Amara Okafor');
   const tile = await image(bot.picture);

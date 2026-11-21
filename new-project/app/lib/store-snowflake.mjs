@@ -69,6 +69,24 @@ export function createSnowflakeStore(client) {
   /** Last statement the app ran, for the "under the hood" panel. */
   const last = { sql: null, ms: null, rows: null };
 
+  // The tables added on 21 Nov 2026 (LINKEDIN_PROFILES, USER_PHOTOS) exist only after an admin has
+  // run the new block of setup.sql; the app role cannot create them. Until then everything that
+  // needs them is skipped: found out once, said once, and the compass itself is not affected.
+  let extras = null; // null = not known yet, false = the tables are not there
+  async function extra(run, fallback) {
+    if (extras === false) return fallback;
+    try {
+      const out = await run();
+      extras = true;
+      return out;
+    } catch (err) {
+      if (!/does not exist or not authorized|sqlState 42S02/i.test(err.message)) throw err; // only "no such table" is expected here
+      extras = false;
+      console.warn('[snowflake] LINKEDIN_PROFILES / USER_PHOTOS are not in this account yet. LinkedIn records and picked photos are NOT being saved, and pictures are generated initials. To turn them on, run the block added on 21 Nov 2026 in snowflake/setup.sql (section 2) and restart.');
+      return fallback;
+    }
+  }
+
   return {
     kind: 'snowflake',
     last,
@@ -148,62 +166,71 @@ export function createSnowflakeStore(client) {
       return rows.map(toRequest);
     },
 
-    // LinkedIn records and picked photos live in their own tables (LINKEDIN_PROFILES,
-    // USER_PHOTOS), so the three original tables and every query above are unchanged.
+    // LinkedIn records and picked photos live in two tables of their own, LINKEDIN_PROFILES and
+    // USER_PHOTOS (added 21 Nov 2026), so the three original tables and every query above are unchanged.
+    // An account that has not run that block of setup.sql keeps working: see `extra` above.
     // WRITTEN, NOT YET RUN on Snowflake: `npm run snowflake:check` exercises these statements.
     async saveLinkedinProfile(userId, f, atMs) {
-      await q(
-        `MERGE INTO LINKEDIN_PROFILES t
-         USING (SELECT ? AS USER_ID, ? AS LINKEDIN_SUB, ? AS NAME, ? AS GIVEN_NAME, ? AS FAMILY_NAME, ? AS EMAIL,
-                       TO_BOOLEAN(?) AS EMAIL_VERIFIED, ? AS PICTURE_URL, ? AS LOCALE, ? AS PROFILE_URL,
-                       PARSE_JSON(?) AS RAW_CLAIMS, ? AS AT_MS) s
-         ON t.USER_ID = s.USER_ID
-         WHEN MATCHED THEN UPDATE SET LINKEDIN_SUB = s.LINKEDIN_SUB, NAME = s.NAME, GIVEN_NAME = s.GIVEN_NAME,
-              FAMILY_NAME = s.FAMILY_NAME, EMAIL = s.EMAIL, EMAIL_VERIFIED = s.EMAIL_VERIFIED, PICTURE_URL = s.PICTURE_URL,
-              LOCALE = s.LOCALE, PROFILE_URL = s.PROFILE_URL, RAW_CLAIMS = s.RAW_CLAIMS, LAST_REFRESHED_MS = s.AT_MS
-         WHEN NOT MATCHED THEN INSERT (USER_ID, LINKEDIN_SUB, NAME, GIVEN_NAME, FAMILY_NAME, EMAIL, EMAIL_VERIFIED,
-              PICTURE_URL, LOCALE, PROFILE_URL, RAW_CLAIMS, FIRST_SEEN_MS, LAST_REFRESHED_MS)
-              VALUES (s.USER_ID, s.LINKEDIN_SUB, s.NAME, s.GIVEN_NAME, s.FAMILY_NAME, s.EMAIL, s.EMAIL_VERIFIED,
-              s.PICTURE_URL, s.LOCALE, s.PROFILE_URL, s.RAW_CLAIMS, s.AT_MS, s.AT_MS)`,
-        [userId, f.sub, f.name, f.givenName, f.familyName, f.email, f.emailVerified === null ? null : String(f.emailVerified),
-          f.picture, f.locale, f.profileUrl ?? null, JSON.stringify(f.claims ?? {}), atMs],
-      );
-      return this.getLinkedinProfile(userId);
+      return extra(async () => {
+        await q(
+          `MERGE INTO LINKEDIN_PROFILES t
+           USING (SELECT ? AS USER_ID, ? AS LINKEDIN_SUB, ? AS NAME, ? AS GIVEN_NAME, ? AS FAMILY_NAME, ? AS EMAIL,
+                         TO_BOOLEAN(?) AS EMAIL_VERIFIED, ? AS PICTURE_URL, ? AS LOCALE, ? AS PROFILE_URL,
+                         PARSE_JSON(?) AS RAW_CLAIMS, ? AS AT_MS) s
+           ON t.USER_ID = s.USER_ID
+           WHEN MATCHED THEN UPDATE SET LINKEDIN_SUB = s.LINKEDIN_SUB, NAME = s.NAME, GIVEN_NAME = s.GIVEN_NAME,
+                FAMILY_NAME = s.FAMILY_NAME, EMAIL = s.EMAIL, EMAIL_VERIFIED = s.EMAIL_VERIFIED, PICTURE_URL = s.PICTURE_URL,
+                LOCALE = s.LOCALE, PROFILE_URL = s.PROFILE_URL, RAW_CLAIMS = s.RAW_CLAIMS, LAST_REFRESHED_MS = s.AT_MS
+           WHEN NOT MATCHED THEN INSERT (USER_ID, LINKEDIN_SUB, NAME, GIVEN_NAME, FAMILY_NAME, EMAIL, EMAIL_VERIFIED,
+                PICTURE_URL, LOCALE, PROFILE_URL, RAW_CLAIMS, FIRST_SEEN_MS, LAST_REFRESHED_MS)
+                VALUES (s.USER_ID, s.LINKEDIN_SUB, s.NAME, s.GIVEN_NAME, s.FAMILY_NAME, s.EMAIL, s.EMAIL_VERIFIED,
+                s.PICTURE_URL, s.LOCALE, s.PROFILE_URL, s.RAW_CLAIMS, s.AT_MS, s.AT_MS)`,
+          [userId, f.sub, f.name, f.givenName, f.familyName, f.email, f.emailVerified === null ? null : String(f.emailVerified),
+            f.picture, f.locale, f.profileUrl ?? null, JSON.stringify(f.claims ?? {}), atMs],
+        );
+        return this.getLinkedinProfile(userId);
+      }, null);
     },
     async getLinkedinProfile(userId) {
-      const rows = await q(`SELECT * FROM LINKEDIN_PROFILES WHERE USER_ID = ? LIMIT 1`, [userId]);
-      return rows[0] ? toLinkedinProfile(rows[0]) : null;
+      return extra(async () => {
+        const rows = await q(`SELECT * FROM LINKEDIN_PROFILES WHERE USER_ID = ? LIMIT 1`, [userId]);
+        return rows[0] ? toLinkedinProfile(rows[0]) : null;
+      }, null);
     },
     async setLinkedinProfileUrl(userId, profileUrl) {
-      await q(`UPDATE LINKEDIN_PROFILES SET PROFILE_URL = ? WHERE USER_ID = ?`, [profileUrl, userId]);
+      await extra(() => q(`UPDATE LINKEDIN_PROFILES SET PROFILE_URL = ? WHERE USER_ID = ?`, [profileUrl, userId]));
     },
     async deleteLinkedinProfile(userId) {
-      await q(`DELETE FROM LINKEDIN_PROFILES WHERE USER_ID = ?`, [userId]);
+      await extra(() => q(`DELETE FROM LINKEDIN_PROFILES WHERE USER_ID = ?`, [userId]));
     },
     async listLinkedinProfiles() {
-      return (await q(`SELECT * FROM LINKEDIN_PROFILES ORDER BY FIRST_SEEN_MS`)).map(toLinkedinProfile);
+      return extra(async () => (await q(`SELECT * FROM LINKEDIN_PROFILES ORDER BY FIRST_SEEN_MS`)).map(toLinkedinProfile), []);
     },
 
     async setPhoto(userId, dataUrl) {
-      if (!dataUrl) return void (await q(`DELETE FROM USER_PHOTOS WHERE USER_ID = ?`, [userId]));
-      await q(
-        `MERGE INTO USER_PHOTOS t
-         USING (SELECT ? AS USER_ID, ? AS PHOTO, ? AS UPDATED_MS) s
-         ON t.USER_ID = s.USER_ID
-         WHEN MATCHED THEN UPDATE SET PHOTO = s.PHOTO, UPDATED_MS = s.UPDATED_MS
-         WHEN NOT MATCHED THEN INSERT (USER_ID, PHOTO, UPDATED_MS) VALUES (s.USER_ID, s.PHOTO, s.UPDATED_MS)`,
-        [userId, dataUrl, Date.now()],
-      );
+      await extra(() => (dataUrl
+        ? q(
+          `MERGE INTO USER_PHOTOS t
+           USING (SELECT ? AS USER_ID, ? AS PHOTO, ? AS UPDATED_MS) s
+           ON t.USER_ID = s.USER_ID
+           WHEN MATCHED THEN UPDATE SET PHOTO = s.PHOTO, UPDATED_MS = s.UPDATED_MS
+           WHEN NOT MATCHED THEN INSERT (USER_ID, PHOTO, UPDATED_MS) VALUES (s.USER_ID, s.PHOTO, s.UPDATED_MS)`,
+          [userId, dataUrl, Date.now()],
+        )
+        : q(`DELETE FROM USER_PHOTOS WHERE USER_ID = ?`, [userId])));
     },
     async getAvatar(userId) {
-      const rows = await q(
-        `SELECT u.NAME, p.PHOTO, l.PICTURE_URL
-         FROM USERS u
-         LEFT JOIN USER_PHOTOS p ON p.USER_ID = u.ID
-         LEFT JOIN LINKEDIN_PROFILES l ON l.USER_ID = u.ID
-         WHERE u.ID = ? LIMIT 1`,
-        [userId],
-      );
+      const rows = await extra(
+        () => q(
+          `SELECT u.NAME, p.PHOTO, l.PICTURE_URL
+           FROM USERS u
+           LEFT JOIN USER_PHOTOS p ON p.USER_ID = u.ID
+           LEFT JOIN LINKEDIN_PROFILES l ON l.USER_ID = u.ID
+           WHERE u.ID = ? LIMIT 1`,
+          [userId],
+        ),
+        null,
+      ) ?? await q(`SELECT NAME FROM USERS WHERE ID = ? LIMIT 1`, [userId]); // without the new tables: the name is enough for initials
       return rows[0] ? { name: rows[0].NAME, photo: rows[0].PHOTO ?? null, picture: rows[0].PICTURE_URL ?? null } : null;
     },
   };

@@ -331,13 +331,6 @@ legend { font-size: .82rem; font-weight: 600; color: var(--label-2); margin-bott
 }
 .chips input:focus-visible + span { outline: 2px solid var(--blue); outline-offset: 2px; }
 @keyframes pop { 45% { transform: scale(1.1); } }
-/* Photo picker on the profile form, and the round picture used there and in the People lists. */
-.avatar { width: 44px; height: 44px; flex: none; border-radius: 50%; object-fit: cover; background: var(--fill); }
-.photo-pick { display: flex; align-items: flex-end; gap: 12px; }
-.photo-pick label { flex: 1; min-width: 0; }
-.photo-pick label span { font-weight: 400; }
-.photo-pick .avatar { width: 52px; height: 52px; }
-input[type="file"] { width: 100%; font-size: .88rem; padding: 10px 12px; }
 
 /* ---------- buttons ---------- */
 
@@ -545,10 +538,6 @@ button.is-busy::after {
 #view-people h2 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.02em; margin: 22px 4px 12px; }
 .list { position: relative; display: grid; gap: 12px; }
 .empty { color: var(--label-2); font-size: .9rem; margin: 0 4px; }
-.row-head { display: flex; align-items: center; gap: 12px; }
-/* "No position" notice under the compass: the same glass row, saying what to do about it. */
-.locate { margin: 0 0 14px; }
-.locate p { margin: 0; font-size: .92rem; }
 
 /* ---------- demo tools ---------- */
 
@@ -602,3 +591,16 @@ button.is-busy::after {
   main > *, main > form > *, .card, .bar nav, .start { transform: none !important; filter: none !important; }
   .cc-person { transition: none; }
 }
+
+/* ---------- pictures, the photo picker and the "no position" notice (LinkedIn and location work) ---------- */
+
+.avatar { width: 44px; height: 44px; flex: none; border-radius: 50%; object-fit: cover; background: var(--fill); }
+.row-head { display: flex; align-items: center; gap: 12px; }
+.photo-pick { display: flex; align-items: flex-end; gap: 12px; }
+.photo-pick label { flex: 1; min-width: 0; }
+.photo-pick label span { font-weight: 400; }
+.photo-pick .avatar { width: 52px; height: 52px; }
+input[type="file"] { width: 100%; font-size: .88rem; padding: 10px 12px; }
+/* The notice reuses the glass .row; these only space it under the status line. */
+.locate { margin: 0 0 14px; }
+.locate p { margin: 0; font-size: .92rem; }

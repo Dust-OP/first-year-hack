@@ -74,7 +74,6 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
   const quickSignup = (!logto && !linkedin) || demo;
   // One-time codes that hand a finished LinkedIn sign-in over to the page. Kept in memory: one server process.
   const handoffs = new Map(); // code -> { userId, expiresMs }
-  let warnedAvatar = false;
   const originOf = (request) => (publicUrl || new URL(request.url).origin).replace(/\/+$/, '');
 
   async function auth(request) {
@@ -285,16 +284,8 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     // token, and ids are random. It gives away a face or initials, never a position or an email.
     'GET /api/avatar': async (request) => {
       const id = new URL(request.url).searchParams.get('id') ?? '';
-      let a;
-      try {
-        a = await store.getAvatar(id);
-      } catch (err) {
-        // A Snowflake account from before the LinkedIn and photo tables existed: initials still work.
-        if (!warnedAvatar) console.warn('[avatar] pictures fall back to initials:', err.message);
-        warnedAvatar = true;
-        const [u] = await store.getUsers([id]);
-        a = u ? { name: u.name, photo: null, picture: null } : null;
-      }
+      // On a Snowflake account without the photo and LinkedIn tables the store answers with the name only.
+      const a = await store.getAvatar(id);
       if (!a) return fail(404, 'Not found.');
       const headers = { 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" };
       if (a.photo) return new Response(photoBytes(a.photo), { headers: { ...headers, 'Content-Type': 'image/jpeg' } });
