@@ -3,12 +3,52 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "public",
-  "regions": ["lhr1"],
+  "regions": [
+    "lhr1"
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "career-compass-hazel-ten.vercel.app"
+        }
+      ],
+      "destination": "https://wayrise.app/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "career-compass-chatgpt-6e55.vercel.app"
+        }
+      ],
+      "destination": "https://wayrise.app/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index" },
-    { "source": "/callback", "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/callback",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
-    { "source": "/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
   ]
 }

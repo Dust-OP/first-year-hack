@@ -4,7 +4,7 @@ Working title. A phone web app for **Track 2: Retro Remix**: the compass no long
 
 Built 21 Nov 2026. Node 20+. Locally it runs with no install; the one dependency (the Neon Postgres driver) is loaded only when `DATABASE_URL` is set.
 
-**Live:** https://career-compass-hazel-ten.vercel.app (Vercel project `career-compass`, team `chatgpt-6e55`). See [Deploy on Vercel](#deploy-on-vercel).
+**Live:** https://wayrise.app (Vercel project `career-compass`, team `chatgpt-6e55`). The project's generated `*.vercel.app` addresses redirect there. See [Deploy on Vercel](#deploy-on-vercel).
 
 ## The flow
 
@@ -221,9 +221,11 @@ vercel env add DEMO production    # value 1 keeps the demo button and quick sign
 vercel deploy --prod
 ```
 
-To switch on email sign-in on the live site, add `https://career-compass-hazel-ten.vercel.app/callback` (redirect) and `https://career-compass-hazel-ten.vercel.app` (post sign-out) to the Logto application, then `vercel env add LOGTO_APP_ID production` and deploy again.
+To switch on Logto sign-in on the live site, add `https://wayrise.app/callback` (redirect) and `https://wayrise.app` (post sign-out) to the Logto application, then `vercel env add LOGTO_APP_ID production` and deploy again.
 
-Deployment URLs (`career-compass-<hash>-…vercel.app`) sit behind Vercel Authentication; the production address above is public. GitHub is not connected to the project, so a push does not deploy.
+**Domain.** `wayrise.app` is attached to the project. Its DNS is on Cloudflare: two `A` records for `@`, `216.198.79.1` and `64.29.17.1`, proxy off (DNS only) so Vercel can issue the certificate. Email records (MX) on the domain belong to the email sign-in and are not Vercel's. `vercel.json` redirects the generated addresses `career-compass-hazel-ten.vercel.app` and `career-compass-chatgpt-6e55.vercel.app` to `https://wayrise.app`, so register sign-in redirect addresses for `wayrise.app` only. Check with `vercel domains verify wayrise.app`.
+
+Deployment URLs (`career-compass-<hash>-…vercel.app`) sit behind Vercel Authentication; `wayrise.app` is public. GitHub is not connected to the project, so a push does not deploy.
 
 ## Snowflake
 
