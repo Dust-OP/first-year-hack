@@ -7,3 +7,9 @@ The [reference-loop](reference-loop/) directory contains the skill, helper scrip
 ## Deployment
 
 Deploy to Vercel only when explicitly requested or when needed to show a live result. Pushing to GitHub does not currently trigger a Vercel deployment.
+
+## KCL First Year Hackason
+## Team Members
+- [Tianyi Wang](https://github.com/Dust-OP)
+- [Yuanwei Ma](https://github.com/mayuanwei668-coder)
+  
