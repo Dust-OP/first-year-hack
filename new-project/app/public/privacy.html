@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy notice · Career Compass</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f2f2f7; --card: #fff; --text: #1c1c1e; --muted: #3a3a3c; --line: #d1d1d6; --link: #0a84ff; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #000; --card: #1c1c1e; --text: #f2f2f7; --muted: #c7c7cc; --line: #38383a; --link: #64d2ff; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 680px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 28px; margin: 8px 0 4px; }
+    h2 { font-size: 19px; margin: 28px 0 8px; }
+    p, li { color: var(--muted); }
+    a { color: var(--link); }
+    .card { background: var(--card); border-radius: 16px; padding: 4px 16px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; vertical-align: top; padding: 10px 8px 10px 0; border-bottom: 1px solid var(--line); }
+    tr:last-child td { border-bottom: 0; }
+    th { color: var(--text); font-weight: 600; }
+    .note { font-size: 14px; }
+    button { font: inherit; color: #fff; background: #0a84ff; border: 0; border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<main>
+  <p><a href="./">← Back to Career Compass</a></p>
+  <h1>Privacy notice</h1>
+  <p class="note">Career Compass is a student prototype built at KCL FirstYearHack on 21 November 2026. This page describes what the app's code does today. It has not had a legal review.</p>
+
+  <h2>What other people see</h2>
+  <ul>
+    <li>Only people within <b>500 m</b> who also have the app open, and only while you are visible.</li>
+    <li>Your name, what you do, your LinkedIn link, and what you offer and are looking for.</li>
+    <li>A <b>direction and a distance</b> to you. Your coordinates never leave the server, so nobody sees you on a map.</li>
+    <li>If you sign in with email, your email address is <b>never</b> shown to other users.</li>
+  </ul>
+
+  <h2>What is stored, where and for how long</h2>
+  <div class="card">
+    <table>
+      <tr><th>What</th><th>Where</th><th>How long</th></tr>
+      <tr><td>Profile: name, what you do, LinkedIn link, what you offer and seek</td><td>The app's database in Snowflake, London (UK South) region</td><td>Until it is deleted. A “Delete my account” button is being added. Until then, ask the team at the event to delete it.</td></tr>
+      <tr><td>Your latest position and its accuracy</td><td>Snowflake, London region. One row per person: each update replaces the last, so no history is kept</td><td>Stops counting after 45 seconds. “Go invisible”, signing out or closing the page removes it at once</td></tr>
+      <tr><td>Invitations you send or receive, and whether they were accepted</td><td>Snowflake, London region</td><td>Until your account is deleted</td></tr>
+      <tr><td>A hash of your session token (not the token itself)</td><td>Snowflake, London region</td><td>Until you sign out or your account is deleted</td></tr>
+      <tr><td>If you sign in with email: your sign-in ID and email address</td><td>Snowflake, London region, and the team's sign-in service (Logto), which sends the one-time code</td><td>Until your account is deleted</td></tr>
+    </table>
+  </div>
+  <p class="note">If the app runs without Snowflake (for example in an offline demo), the same data is kept only in the server's memory and disappears when it restarts.</p>
+
+  <h2>On your device</h2>
+  <div class="card">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Purpose</th></tr>
+      <tr><td><code>cc.token</code></td><td>Local storage</td><td>Random session token that keeps you signed in. Removed when you sign out.</td></tr>
+      <tr><td><code>cc_consent</code></td><td>Cookie, 6 months</td><td>Remembers your choice in the “Before you start” dialog.</td></tr>
+      <tr><td>Sign-in check values</td><td>Session storage</td><td>Only during email sign-in. Deleted as soon as you come back from the sign-in page.</td></tr>
+    </table>
+  </div>
+  <p>There are no adverts, analytics or tracking cookies.</p>
+
+  <h2>Why we use it</h2>
+  <p>Only to point your compass at people nearby and let you invite them. We ask for your agreement before you start, and you can change your mind at any time. Your phone also asks you separately before it shares your location or motion sensors.</p>
+
+  <h2>Demo people</h2>
+  <p>During demos the app can place made-up “demo people” around you. They are not real users and are marked as demo data in the database.</p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li>Go invisible, or sign out, at any time.</li>
+    <li>Change your agreement: <button type="button" id="change-consent">Change my choice</button></li>
+    <li>Ask the team to delete your account and invitations. A button for this is being added.</li>
+  </ul>
+  <p class="note">Last updated 21 November 2026.</p>
+</main>
+<script src="vendor/cookieconsent/cookieconsent.umd.js"></script>
+<script src="consent.js"></script>
+<script>
+  document.getElementById('change-consent').addEventListener('click', () => window.compassConsent?.change());
+</script>
+</body>
+</html>
