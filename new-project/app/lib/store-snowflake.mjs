@@ -2,7 +2,7 @@
 // (ST_AZIMUTH / ST_DISTANCE / ST_DWITHIN on GEOGRAPHY), which is the part
 // of the app meant to show for the "Best Use of Snowflake" prize.
 // Tables come from snowflake/setup.sql.
-// NOT YET RUN against a live account: verify with `npm run snowflake:check`.
+// Run against the team's account on 21 Nov 2026; re-check with `npm run snowflake:check`.
 
 const num = (v) => (v === null || v === undefined ? null : Number(v));
 const bool = (v) => v === true || v === 'true' || v === '1';

@@ -467,8 +467,10 @@ $('manual').addEventListener('click', () => {
 });
 $('hide').addEventListener('click', async () => {
   state.visible = !state.visible;
+  if (!state.visible) {
+    try { await api('POST', '/api/hide'); } catch (ex) { state.visible = true; alert(`Could not hide you: ${ex.message}`); }
+  }
   $('hide').textContent = state.visible ? 'Go invisible' : 'Become visible';
-  if (!state.visible) await api('POST', '/api/hide').catch(() => {});
   sync();
 });
 
@@ -506,10 +508,17 @@ function enter() {
   show('signup');
 }
 
-$('signin').addEventListener('click', () => { $('signin').disabled = true; state.logto.signIn(); });
+$('signin').addEventListener('click', async () => {
+  $('signin').disabled = true;
+  try { await state.logto.signIn(); } catch (ex) {
+    $('welcome-error').textContent = `Sign-in could not start: ${ex.message}`;
+    $('welcome-error').hidden = false;
+    $('signin').disabled = false;
+  }
+});
 $('signin-linkedin').addEventListener('click', () => { $('signin-linkedin').disabled = true; linkedin.signIn(); });
-// Back from LinkedIn's page with the browser's back button: the button must work again.
-window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin-linkedin').disabled = false; });
+// Back from the sign-in page brings this page back exactly as it was left: buttons still disabled.
+window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = $('signin-linkedin').disabled = false; });
 $('quick').addEventListener('click', () => show('signup'));
 
 (async function boot() {

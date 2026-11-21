@@ -1,9 +1,8 @@
 # Safari icons are Apple artwork: kept on this machine only, not in the public repo.
 # Rebuild them with the commands in README.md.
-safari/raw/
-safari/*/stills/
-safari/*/clips/
-safari/*/*.mp4
+safari/**
+!safari/**/
+!safari/**/*.json
 
 # Normalised stills are rebuilt by tools/make_clips.py from raw/.
 compass/stills/

@@ -8,7 +8,7 @@ Material for the demo video: how the Safari icon changed from its first version 
 |---|---|---|
 | `compass/compass-evolution.mp4` | One continuous video: 15 compass stages, 24 s, 1080×1080 | Yes |
 | `compass/clips/NN-MM.mp4` | One 2.5 s clip per step (stage NN swaps to stage MM) | Yes |
-| `compass/raw/` | The 15 source photos (public domain or Creative Commons, see the credits below) | Yes |
+| `compass/raw/` | The 15 source photos, 14 of them Wikimedia's downscaled copies (public domain or Creative Commons, see the credits below) | Yes |
 | `compass/manifest.json` | Order, labels, sources, licences, crops | Yes |
 | `compass/stills/` | The photos normalised to 1080×1080 transparent PNGs | No, rebuilt by `make_clips.py` |
 | `safari/{all,mac,ios}/manifest.json` | Order, versions, years and source URLs of the Safari icons | Yes |
@@ -20,7 +20,14 @@ Material for the demo video: how the Safari icon changed from its first version 
 
 **The swap animation.** Each step holds the old image for 0.9 s. The old image then shrinks to 80% and fades out while the new one settles from 120% to 100% and fades in, over 0.7 s with smoothstep easing. The new image then holds for 0.9 s. The continuous video chains the same swaps without repeating the holds. Built with ffmpeg only.
 
-Rebuild the compass set: `python3 tools/make_clips.py compass --mode photo --bg 0x111111 --name compass`
+Rebuild the compass set:
+
+```sh
+cd new-project/video-info
+python3 tools/make_clips.py compass --mode photo --bg 0x111111 --name compass
+```
+
+Rebuilding rewrites the tracked clips and video; do not commit the result unless a photo, the order or the timing changed.
 
 ## Safari: kept out of git on purpose
 
@@ -60,11 +67,13 @@ Three sets: `all` is every change in date order across Mac and iPhone (11 icons,
 
 ## Compass stages and credits
 
-The Creative Commons licences require this credit wherever the images or clips are shown (CC BY-SA also requires derivatives to keep the same licence). In the video, a single credits card that points to this page is enough.
+The Creative Commons licences require this credit wherever the images or clips are shown (CC BY-SA also requires derivatives to keep the same licence). In the video, a single credits card is enough if it links to this page and says "Compass sequence: CC BY-SA 4.0".
+
+**Licence of the clips and the video.** `compass/clips/*.mp4` and `compass/compass-evolution.mp4` are adaptations of the photos credited below, made by the first-year-hack team, and are offered under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Anything that reuses them, including our demo film, must show these credits or a link to this page and state that licence. The files in `compass/raw/` keep the licence listed for each photo.
 
 | # | Stage | Era | Author | Licence | Source |
 |---|---|---|---|---|---|
-| 1 | Lodestone spoon on bronze earth plate (sinan), modern model | Han dynasty, c. 2nd c. BC - 1st c. AD (model) | Typo (Wikimedia Commons user); cropped by Hohum | [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/) | [Commons](https://commons.wikimedia.org/wiki/File:Model_Si_Nan_of_Han_Dynasty.jpg) |
+| 1 | Lodestone spoon on bronze earth plate (sinan), modern model | Han dynasty, c. 2nd c. BC - 1st c. AD (model) | Typo~commonswiki (uploader; the Commons page names no author); cropped by Hohum | [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/) | [Commons](https://commons.wikimedia.org/wiki/File:Model_Si_Nan_of_Han_Dynasty.jpg) |
 | 2 | Floating south-pointing fish (wet compass), reconstruction | Song dynasty, 11th c. (reconstruction, Guangdong Science Center) | Pauloleong2002 | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | [Commons](https://commons.wikimedia.org/wiki/File:Compass_and_%22Guide_to_fish%22.jpg) |
 | 3 | Chinese luopan (feng shui geomantic compass) | Form from Song-Ming era onward; object undated, probably 19th-20th c. | Александр Сигачёв | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [Commons](https://commons.wikimedia.org/wiki/File:Museum_of_the_Middle_Urals_-_Chinese_luopan.jpg) |
 | 4 | Dry-pivot box compass, gimballed (Mary Rose) | 1545 (sank); earliest Western gimballed steering compass | Tim Sheerman-Chase | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0) | [Commons](https://commons.wikimedia.org/wiki/File:Gimballed_Compass,_Mary_Rose_-_55129422442.jpg) |
@@ -81,8 +90,9 @@ The Creative Commons licences require this credit wherever the images or clips a
 | 15 | Smartphone compass app (HTC Desire S, Android) | 2011 | Zirguezi | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [Commons](https://commons.wikimedia.org/wiki/File:Smartphone_Compass.jpg) |
 
 **Notes.**
-- **Crops:** stage 6 is cropped to remove a scale bar, and stage 12 is cropped to the compass. Other photos are shown whole on a dark background.
+- **Changes:** the files in `compass/raw/` are Wikimedia's downscaled copies of the originals (at most 1920 px wide; stage 1 is full size) and are otherwise unchanged. In the clips and the video every photo is scaled to fit a 1080×1080 dark background and cross-faded into the next one; stage 6 is also cropped to remove a scale bar and stage 12 is cropped to the compass.
 - **Reconstructions and later copies:** stages 1 and 2 are modern reconstructions of the ancient designs. Stages 9, 11 and 13 are modern units of older designs.
+- **Stage 6:** Commons tags this photo public domain; the Missouri History Museum's own statement is "copyright undetermined", with an open-access policy that allows use without permission.
 - **Stage 15:** the photo is CC0, but the compass app shown on the phone screen belongs to its developer.
 - **Gaps:**
   - no free image of the iPhone 3GS (2009) or current Apple and Google compass screens; the source pages are in `not-used.json`;

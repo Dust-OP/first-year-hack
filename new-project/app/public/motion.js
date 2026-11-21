@@ -43,11 +43,17 @@ onText($('hide'), (t) => {
 // ---------- busy: from the tap until the answer arrives ----------
 
 const busyTimers = new WeakMap();
+// app.js gives a button back (disabled = false) when its request fails: end the busy look at once,
+// or the button would swallow every retry tap until the timer runs out.
+const givenBack = new MutationObserver((records) => {
+  for (const r of records) if (!r.target.disabled) idle(r.target);
+});
 function busy(btn, ms = 8000) {
   btn.classList.add('is-busy');
   btn.setAttribute('aria-busy', 'true');
   clearTimeout(busyTimers.get(btn));
   busyTimers.set(btn, setTimeout(() => idle(btn), ms));
+  givenBack.observe(btn, { attributes: true, attributeFilter: ['disabled'] });
 }
 function idle(btn) {
   btn.classList.remove('is-busy');
@@ -56,7 +62,8 @@ function idle(btn) {
 
 // A button that app.js disables in its own click handler is waiting on the server
 // (Send invitation, Accept, Decline, Sign in). Its row or card is rebuilt when the answer comes,
-// which removes the button and so ends the shimmer; the timer covers a failed request.
+// which removes the button and so ends the shimmer. A failed request gives the button back, which
+// givenBack sees; the timer covers an answer that never shows.
 const enabledAtTap = new WeakSet();
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button');

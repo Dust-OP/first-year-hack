@@ -1,7 +1,7 @@
 # Snowflake in real projects: what it does, which roles they used, what broke
 
 Inspected: 2026-11-21. Source and docs were read (no cloned code was executed). A **live check on the team's trial account** followed the same day: [`live-account-check.md`](live-account-check.md).
-Adoption state: **not adopted**. This is a recommendation for the team to decide.
+Adoption state: **partly adopted (2026-11-21)**. In `app/`: the least-privilege role, XS warehouse, key-pair service user, bearing and distance computed in Snowflake, and the panel showing the SQL. Not adopted: Overture Places queries and `AI_COMPLETE`.
 
 ## Live-account update (2026-11-21, verified-live)
 
@@ -16,7 +16,7 @@ Adoption state: **not adopted**. This is a recommendation for the team to decide
   - The server reports `store: snowflake`.
   - The private key and `app/.env` stay outside Git.
   - The app does not query Overture places yet.
-  - Not tested end to end: sign-up, invite and location writes.
+  - Run end to end on the Snowflake store the same day (about 13:00): sign-up, position, nearby, invite and accept. See `app/README.md`.
 
 ## Question
 
@@ -58,7 +58,7 @@ Source: [`roles-and-setup.md`](roles-and-setup.md) §2, verified-in-spec against
 
 - **Snowflake's job:** the compass "brain". Snowflake turns (my position, intent) into a bearing and distance to real places, using Overture Places with `ST_DWITHIN` + `ST_DISTANCE` + `DEGREES(ST_AZIMUTH(...))`. The phone dial must keep working without Snowflake (demo mode).
 - **Visible to judges:** an "Under the hood" panel showing the exact SQL, row counts and latency (Vigil's idea), plus a clean role setup (WayForward/Silicon Shoppers' idea). Use governance as the fallback "Snowflake story" if AI is unavailable.
-- **AI is optional:** add at most one `AI_COMPLETE` call (for example navigator-log narration), with a fallback. Call it through SQL, not the Cortex REST chat endpoint, which returned 403 on trials in two projects. Set `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'`: the two teams that set it got Cortex working, and the two that didn't were blocked. Don't send `temperature` to Claude models.
+- **AI is optional:** add at most one `AI_COMPLETE` call (for example navigator-log narration), with a fallback. Call it through SQL, not the Cortex REST chat endpoint, which returned 403 on trials in two projects. `CORTEX_ENABLED_CROSS_REGION` is already `ANY_REGION` on our account: the two teams that set it got Cortex working, and the two that didn't were blocked. Don't send `temperature` to Claude models.
 - **Setup:** the draft [`roles-and-setup.md` §6](roles-and-setup.md) uses:
   - one `COMPASS_APP_ROLE` under SYSADMIN
   - an XS warehouse with `AUTO_SUSPEND = 60`
@@ -67,7 +67,7 @@ Source: [`roles-and-setup.md`](roles-and-setup.md) §2, verified-in-spec against
   - optionally `CORTEX_USER`
   - a `TYPE = SERVICE` user with key-pair auth (simpler than a PAT on Vercel, which has no fixed IP)
 
-  The draft has **not been run**.
+  The draft itself was not run. The app's `app/snowflake/setup.sql`, built from it, was run on 2026-11-21 (see the live-account update above). The draft still says `OVERTURE_MAPS__PLACES`; on our account the name is `OVERTURE_MAPS_PLACES`.
 - **Time box:** ReplicaVire's own notes call Snowflake a "time sink". Get one working query from the backend before building on it.
 
 ## Gotchas that can block us
@@ -86,13 +86,13 @@ Source: [`roles-and-setup.md`](roles-and-setup.md) §2, verified-in-spec against
 
 Of all the project repos read, only Temple Twin and ThreeOneOne have licences. All the others, including every Snowflake-prize winner, are **reference only**. The Snowflake-Labs samples are Apache-2.0 and can be copied with attribution.
 
-## Next checks (need a Snowflake account)
+## Next checks
 
 1. ~~Check the Overture listing and its columns~~ (done, verified-live).
 2. ~~Run the compass query from Bush House and check bearings against a map~~ (done, verified-live; normalise to 0–360).
-3. ~~Run `app/snowflake/setup.sql` and grant Overture read access~~ (done; `snowflake:check` passes). Next: test sign-up, invite and location writes end to end, and add a resource monitor (setup.sql §4) to cap credits.
+3. ~~Run `app/snowflake/setup.sql` and grant Overture read access~~ (done; `snowflake:check` passes and the full flow ran on the Snowflake store). Next: add a resource monitor (`app/snowflake/setup.sql` §4) to cap credits.
 4. ~~Ask whether AI is enabled~~ (it is on our trial).
-5. If the backend is Node, read the Node driver's key-pair options: https://docs.snowflake.com/en/developer-guide/node-js/nodejs-driver-authenticate
+5. ~~Read the Node driver's key-pair options~~ (not needed: the app uses the SQL API with a key-pair JWT and no driver; see `app/lib/snowflake.mjs`).
 
 ## Files
 
