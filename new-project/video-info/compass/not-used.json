@@ -1,0 +1,98 @@
+{
+  "checked": "2026-11-21",
+  "non_free_or_ui_copyright": [
+    {
+      "stage": "First phone compass app, iPhone 3GS (2009)",
+      "source_page": "https://www.apple.com/newsroom/2009/06/08Apple-Announces-the-New-iPhone-3GS-The-Fastest-Most-Powerful-iPhone-Yet/",
+      "status": "Apple press release; page mentions the digital compass. Images and the Compass app UI are Apple copyright. Not downloaded. No free Commons image of the 3GS compass app found."
+    },
+    {
+      "stage": "Current iPhone Compass app",
+      "source_page": "https://support.apple.com/guide/iphone/use-compass-iph1ac0b1bc/ios",
+      "status": "Apple support page (resolves, mentions Compass). UI screenshots are Apple copyright. Not downloaded."
+    },
+    {
+      "stage": "Current Apple Watch Compass app",
+      "source_page": "https://support.apple.com/guide/watch/compass-apd1d0dc9b6b/watchos",
+      "status": "Apple support page (URL resolves and mentions Compass; content not reviewed in detail). Apple copyright. Not downloaded."
+    },
+    {
+      "stage": "Google Maps compass / heading beam",
+      "source_page": "https://support.google.com/maps/answer/2839911",
+      "status": "Google help page on location accuracy and compass calibration. Google copyright. Not downloaded."
+    },
+    {
+      "stage": "Smartwatch compass (free alternative)",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Shearwater_Perdix_in_compass_mode_P9070457.jpg",
+      "status": "CC BY-SA 4.0 photo of a dive computer in compass mode; on-screen UI is the manufacturer's design. Not downloaded; possible stand-in for a modern wearable."
+    }
+  ],
+  "rejected_licence": [
+    {
+      "title": "File:Compass in a wooden frame.png",
+      "page": "https://commons.wikimedia.org/wiki/File:Compass_in_a_wooden_frame.png",
+      "reason": "Licence 'Copyrighted free use', not PD/CC0/CC-BY/CC-BY-SA as required."
+    },
+    {
+      "title": "File:052212.ROB.001 World War I Lensatic Compass with brown leather case.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:052212.ROB.001_World_War_I_Lensatic_Compass_with_brown_leather_case.jpg",
+      "reason": "Flickr 'No known copyright restrictions' (SDASM), which notes the material may be copyrighted; not a clear PD/CC licence."
+    }
+  ],
+  "rejected_quality_or_fit": [
+    {
+      "title": "File:Early compass (3666422610).jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Early_compass_(3666422610).jpg",
+      "licence": "CC BY 2.0",
+      "reason": "Good-looking compass-rose card in a wooden bowl (Science Museum, London), but no date or provenance recorded. Usable alternative for the mariner's-compass stage if the date is confirmed."
+    },
+    {
+      "title": "File:Liquid filled compass.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Liquid_filled_compass.jpg",
+      "licence": "CC BY-SA 2.0",
+      "reason": "Liquid-filled lensatic (Nicolas Kaiser, 2005); too similar to the US Army lensatic stage."
+    },
+    {
+      "title": "File:Reproducción de brújula modelo Si Nan. Museo Naval de Madrid.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Reproducci%C3%B3n_de_br%C3%BAjula_modelo_Si_Nan._Museo_Naval_de_Madrid.jpg",
+      "licence": "CC BY-SA 4.0",
+      "reason": "Alternative sinan, higher resolution but small in frame with a museum label; chosen file has a cleaner background."
+    },
+    {
+      "title": "File:司南 - panoramio.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:%E5%8F%B8%E5%8D%97_-_panoramio.jpg",
+      "licence": "CC BY-SA 3.0",
+      "reason": "Alternative sinan (2592 px), angled view with signage behind; keep as a higher-resolution fallback."
+    },
+    {
+      "title": "File:Sundial Compass (Germany), late 17th–early 18th century (CH 18416839).jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Sundial_Compass_(Germany),_late_17th%E2%80%93early_18th_century_(CH_18416839).jpg",
+      "licence": "Public domain",
+      "reason": "Ivory diptych sundial, clean shot, but the compass is small; alternative for the pocket-sundial stage."
+    },
+    {
+      "title": "File:1607 compass (5850660847) (2).jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:1607_compass_(5850660847)_(2).jpg",
+      "licence": "CC BY 2.0",
+      "reason": "Diptych sundial-compass held in a hand; busy background; probably a replica."
+    },
+    {
+      "title": "File:Gimbled Steering Compass, Mary Rose - 55129422322.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Gimbled_Steering_Compass,_Mary_Rose_-_55129422322.jpg",
+      "licence": "CC BY 4.0",
+      "reason": "Second Mary Rose compass (round drum-shaped housing with lid, display signage behind); the chosen box compass shows the pivot more clearly."
+    },
+    {
+      "title": "File:Cammenga-lensatic-compass-model-27.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Cammenga-lensatic-compass-model-27.jpg",
+      "licence": "CC BY 3.0",
+      "reason": "Modern Cammenga unit, clean and larger in frame; alternative if the chosen CIA photo crops poorly."
+    },
+    {
+      "title": "File:CASIO ATC-1100 (2058507659).jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:CASIO_ATC-1100_(2058507659).jpg",
+      "licence": "CC BY 2.0",
+      "reason": "Earlier Casio triple-sensor watch held in a hand; busier background than the PRT-411 shot."
+    }
+  ]
+}

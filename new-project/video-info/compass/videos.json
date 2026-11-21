@@ -1,0 +1,60 @@
+{
+  "note": "Metadata only via yt-dlp --dump-json --skip-download on 2026-11-21; videos not downloaded or watched. Quality/accuracy not reviewed; Curiosity Corner looks like a small, possibly automated channel.",
+  "videos": [
+    {
+      "url": "https://www.youtube.com/watch?v=Eup2J0oAq9Y",
+      "title": "How the compass unlocked the world | Small Thing Big Idea, a TED series",
+      "channel": "TED",
+      "duration_seconds": 201,
+      "duration": "3:21",
+      "upload_date": "20200108",
+      "view_count": 289438,
+      "license": null,
+      "description": "\"Everything that we think of as world history would not have taken place without the compass.\" TED science curator David Biello explains how the device changed our relationship to the world.\n\nSmall Th"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=8hERUh9xBbo",
+      "title": "Chinese compass video",
+      "channel": "RAMMuseumExeter",
+      "duration_seconds": 176,
+      "duration": "2:56",
+      "upload_date": "20140609",
+      "view_count": 145,
+      "license": null,
+      "description": "One group chose to investigate this Chinese compass. After taking photographs of the object and carrying out independent research, they interviewed Curator Tony Eccles about it."
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=xHd3Ps634ao",
+      "title": "Navigation Through The Ages",
+      "channel": "The Mariners' Museum and Park",
+      "duration_seconds": 3466,
+      "duration": "57:46",
+      "upload_date": "20260205",
+      "view_count": 458,
+      "license": null,
+      "description": "Check out The Mariners' Shop: \nhttps://shop.marinersmuseum.org/\nDonate to The Mariners' Museum and Park:\nhttps://tmmp.marinersmuseum.org/r/Po9\nVisit The Mariners' Museum and Park:\nhttps://www.mariners"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=ALmvD20AR1s",
+      "title": "How to Find Your Way | Ships, Sea & the Stars",
+      "channel": "Royal Museums Greenwich",
+      "duration_seconds": 3216,
+      "duration": "53:36",
+      "upload_date": "20200827",
+      "view_count": 1717,
+      "license": null,
+      "description": "Google Maps. GPS. Sat nav. Can you remember the last time you DIDN'T use one of these to find your way? \n\nThis week we're exploring the story of navigation, from beautiful early maps to the latest in "
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=HGGI5KgHTzs",
+      "title": "The Evolution of the Compass",
+      "channel": "Curiosity Corner",
+      "duration_seconds": 394,
+      "duration": "6:34",
+      "upload_date": "20241001",
+      "view_count": 131,
+      "license": null,
+      "description": "The compass, a pivotal navigational tool, originated in ancient China during the Han Dynasty for spiritual purposes before evolving into a maritime device by the Song Dynasty. Its spread through trade"
+    }
+  ]
+}

@@ -32,6 +32,7 @@ first-year-hack/                  repository root
     ├── app/                      the web app (demo v1): Node server, API, phone UI, Snowflake setup
     ├── EVENT-BRIEF.md            event tracks as given, team decisions, unconfirmed rules
     ├── RESOURCES.md              index of every linked resource: in repo, external, in progress, kept local
+    ├── video-info/               demo-video material: Safari icon and compass evolution clips, credits, build tools
     └── findings/                 all research findings and evidence
         ├── README.md             index of findings, evidence labels, what is not stored
         ├── retro-compass-prior-art/   prior art, event rules, Snowflake, demo-video references
@@ -66,6 +67,7 @@ first-year-hack/                  repository root
 | `findings/<topic>/evidence/` | Source notes (`E-*.json`) from `reference-loop/loop.mjs note`. | Research sessions |
 | `new-project/app/` | The product: a zero-dependency Node server (`server.mjs`, `lib/`), the phone UI (`public/`), tests (`test/`) and Snowflake setup (`snowflake/`). `public/compass.js` is the dial and belongs to the front-end design work. Start with `app/README.md`. | App sessions |
 | `../reference-loop/` | The research method and its helpers. Do not put project findings here. | Skill maintainers |
+| `new-project/video-info/` | Demo-video material: ordered source images, swap clips and continuous videos, credits, and the scripts that build them. Start with `video-info/README.md`. Apple artwork (the Safari icons and the clips and videos built from them) stays out of git via `video-info/.gitignore`. | Video sessions |
 
 **App checks:** run `npm test` in `new-project/app/` after changing anything under `lib/`. Never commit `app/.env` or key files.
 

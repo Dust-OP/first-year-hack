@@ -1,0 +1,56 @@
+[
+ {
+  "file": "../raw/2007-ios-iphoneos1-retina.png",
+  "platform": "iPhone",
+  "version": "Mobile Safari, iPhone OS 1 to iOS 6",
+  "release": "iPhone OS 1 (2007); Retina redraw from iOS 4 (2010)",
+  "year": 2007,
+  "source": "https://logos.fandom.com/wiki/Safari_(iOS)",
+  "image_url": "https://web.archive.org/web/2026id_/https://static.wikia.nocookie.net/logopedia/images/e/ef/Safari_%28iOS%29_2007.png/revision/latest?cb=20230108202151"
+ },
+ {
+  "file": "../raw/2013-ios-ios7.png",
+  "platform": "iPhone",
+  "version": "Safari, iOS 7",
+  "release": "iOS 7 flat redesign",
+  "year": 2013,
+  "source": "https://logos.fandom.com/wiki/Safari_(iOS)",
+  "image_url": "https://web.archive.org/web/2026id_/https://static.wikia.nocookie.net/logopedia/images/7/7a/Safari_%28iOS%29_2013.png/revision/latest?cb=20260127170519"
+ },
+ {
+  "file": "../raw/2017-ios-ios11.png",
+  "platform": "iPhone",
+  "version": "Safari, iOS 11",
+  "release": "iOS 11",
+  "year": 2017,
+  "source": "https://logos.fandom.com/wiki/Safari_(iOS)",
+  "image_url": "https://web.archive.org/web/2026id_/https://static.wikia.nocookie.net/logopedia/images/e/ed/Safari_%28iOS%29_2017_Plus.png/revision/latest?cb=20260706001222"
+ },
+ {
+  "file": "../raw/2024-ios-ios18.png",
+  "platform": "iPhone",
+  "version": "Safari, iOS 18",
+  "release": "iOS 18",
+  "year": 2024,
+  "source": "https://logos.fandom.com/wiki/Safari_(iOS)",
+  "image_url": "https://web.archive.org/web/2026id_/https://static.wikia.nocookie.net/logopedia/images/e/e8/Safari_%28iOS%29_2024.png/revision/latest?cb=20260817191512"
+ },
+ {
+  "file": "../raw/2025-mac-safari26.png",
+  "platform": "Mac",
+  "version": "Safari 26 (Liquid Glass)",
+  "release": "macOS 26 Tahoe",
+  "year": 2025,
+  "source": "Rendered from /Applications/Safari.app on macOS 26.6",
+  "image_url": "https://web.archive.org/web/2026id_/https://static.wikia.nocookie.net/logopedia/images/1/16/Safari_%28macOS%29_2025.png/revision/latest?cb=20260702003941"
+ },
+ {
+  "file": "../raw/2026-mac-safari27.png",
+  "platform": "Mac",
+  "version": "Safari 27",
+  "release": "macOS 27",
+  "year": 2026,
+  "source": "https://logos.fandom.com/wiki/Safari_(macOS)",
+  "image_url": "https://web.archive.org/web/2026id_/https://static.wikia.nocookie.net/logopedia/images/8/84/Safari_%28macOS%29_2026.png/revision/latest?cb=20260812162345"
+ }
+]
