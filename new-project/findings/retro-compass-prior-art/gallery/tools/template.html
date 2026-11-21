@@ -1,0 +1,116 @@
+<title>Compass Prior Art</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: field-guide gallery. Header with the verdict, sticky filter bar, responsive card grid grouped by source. Accent borrows the magenta of an Ordnance Survey map cover. */
+:root{
+  --bg:#f3f5f6; --surface:#ffffff; --fg:#17202b; --muted:#5b6673; --line:#d9dee3;
+  --accent:#b8155a; --accent-soft:#f7e3ec; --won:#1d6b45; --won-soft:#e1f1e8; --ph:#e8ecef;
+  --display:"Space Grotesk",system-ui,sans-serif; --body:"Inter",system-ui,-apple-system,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --surface:#19212a; --fg:#e7ebef; --muted:#9aa6b2; --line:#2b3540;
+  --accent:#f06a9f; --accent-soft:#3a1f2c; --won:#6fd3a0; --won-soft:#18342a; --ph:#202a34; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --surface:#19212a; --fg:#e7ebef; --muted:#9aa6b2; --line:#2b3540;
+  --accent:#f06a9f; --accent-soft:#3a1f2c; --won:#6fd3a0; --won-soft:#18342a; --ph:#202a34; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1200px;margin:0 auto}
+header{padding-block:36px 20px;display:grid;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,5vw,46px);line-height:1.05;margin:0;text-wrap:balance}
+.lede{max-width:68ch;margin:0;color:var(--fg)}
+.lede b{color:var(--accent)}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:6px}
+.verdict div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.verdict h2{font-family:var(--display);font-size:15px;margin:0 0 4px}
+.verdict p{margin:0;color:var(--muted);font-size:14px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.chip{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip:focus-visible,#q:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chip .k{font-family:var(--mono);opacity:.7;margin-left:4px}
+#q{flex:1 1 180px;min-width:0;font:14px var(--body);padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.count{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto}
+section{margin-top:28px}
+section h3{font-family:var(--display);font-size:20px;margin:0 0 12px;display:flex;gap:10px;align-items:baseline}
+section h3 span{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card.closest{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.shot{aspect-ratio:16/10;max-width:100%;background:var(--ph);position:relative;display:block}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:13px;padding:12px}
+.ph svg{width:44px;height:44px;margin:0 auto 6px;display:block}
+.num{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:12px;background:var(--surface);color:var(--fg);border-radius:6px;padding:2px 7px;font-variant-numeric:tabular-nums}
+.body{padding:12px 14px 14px;display:grid;gap:6px;flex:1;align-content:start}
+.body h4{font-family:var(--display);font-size:17px;margin:0;line-height:1.2;text-wrap:balance}
+.where{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.desc{margin:0;font-size:14px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 6px}
+.tag.won{background:var(--won-soft);color:var(--won)}
+.tag.closest{background:var(--accent-soft);color:var(--accent)}
+.link{margin-top:auto;padding-top:4px;font-size:13px;font-weight:500;color:var(--accent);text-decoration:none}
+.link:hover{text-decoration:underline}
+.empty{color:var(--muted);padding:24px 0}
+footer{margin-top:40px;color:var(--muted);font-size:13px;max-width:75ch}
+@media (prefers-reduced-motion:no-preference){.card{transition:transform .15s}.card:hover{transform:translateY(-2px)}}
+</style>
+<div class="wrap">
+<header>
+  <div class="eyebrow">FirstYearHack 2026 · Track 2 Retro Remix · prior-art check, 21 Nov 2026</div>
+  <h1>59 compasses that already exist</h1>
+  <p class="lede">Every project we found that reinvents the compass, with what each one looks like. Pointing at places, people or north has all been done. <b>Nobody has made a compass that understands a free-text request, checks live facts first, and changes target when those facts change.</b></p>
+  <div class="verdict">
+    <div><h2>Closest to our idea</h2><p>#4 X Marks the Spot (AI picks a hidden place, no prize) and #49 Terra (intention to trail; builders say it doesn't work).</p></div>
+    <div><h2>Why the gap is real</h2><p>#55 pointed to a liquor store that had closed 4 hours earlier. #56's "what you want most" ended up hard-coded to an airport.</p></div>
+    <div><h2>Demo risk</h2><p>#7 CampMap's phone compass was off by more than 100° indoors. Plan a simulated-heading demo mode.</p></div>
+  </div>
+</header>
+<div class="bar" role="toolbar" aria-label="Filter projects">
+  <div id="chips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  <input id="q" type="search" placeholder="Search name or description" aria-label="Search projects">
+  <span class="count" id="count"></span>
+</div>
+<main id="list"></main>
+<footer>Images are each project's own preview picture or video thumbnail, linked to the source page. Two projects (#30, #42) have no usable picture online. Full notes and sources: <code>new-project/research/</code> in the team repo.</footer>
+</div>
+<script>
+const DATA=/*DATA*/[];
+const CATS={A:"Hackathon projects (Devpost)",B:"Maker and open-source builds",C:"Products you can buy or back",D:"Assistive and wearable",E:"Design and art",F:"YouTube builds",G:"Big-company versions"};
+const FILTERS=[["all","All"],["won","Won a prize"],["closest","Closest to ours"],...Object.entries(CATS).map(([k,v])=>[k,v.replace(/ \(.*\)/,"")])];
+let state={f:"all",q:""};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rose='<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 6 L29 24 L24 42 L19 24 Z" fill="currentColor" opacity=".35"/><path d="M24 6 L29 24 L19 24 Z" fill="currentColor"/></svg>';
+function match(p){
+  if(state.f==="won"&&p.f!=="won")return false;
+  if(state.f==="closest"&&p.f!=="closest")return false;
+  if(CATS[state.f]&&p.c!==state.f)return false;
+  const q=state.q.trim().toLowerCase();
+  return !q||(p.t+" "+p.w+" "+p.d).toLowerCase().includes(q);
+}
+function card(p){
+  const shot=p.i?`<img src="${p.i}" alt="${esc(p.t)}" loading="lazy">`:`<div class="ph"><div>${rose}No picture on the project page</div></div>`;
+  const tags=p.f==="won"?'<span class="tag won">Won a prize</span>':p.f==="closest"?'<span class="tag closest">Closest to ours</span>':"";
+  return `<article class="card${p.f==="closest"?" closest":""}"><a class="shot" href="${p.u}" target="_blank" rel="noopener" tabindex="-1">${shot}<span class="num">#${p.n}</span></a>
+  <div class="body"><h4>${esc(p.t)}</h4><div class="where">${esc(p.w)}</div><p class="desc">${esc(p.d)}</p>${tags?`<div class="tags">${tags}</div>`:""}
+  <a class="link" href="${p.u}" target="_blank" rel="noopener">Open project page ↗</a></div></article>`;
+}
+function render(){
+  const shown=DATA.filter(match);
+  document.getElementById("count").textContent=`${shown.length} of ${DATA.length}`;
+  const out=Object.keys(CATS).map(k=>{const g=shown.filter(p=>p.c===k);return g.length?`<section><h3>${CATS[k]}<span>${g.length}</span></h3><div class="grid">${g.map(card).join("")}</div></section>`:""}).join("");
+  document.getElementById("list").innerHTML=out||'<p class="empty">No projects match. Clear the search or pick All.</p>';
+  document.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.f===state.f));
+}
+document.getElementById("chips").innerHTML=FILTERS.map(([k,v])=>{const n=k==="all"?DATA.length:k==="won"||k==="closest"?DATA.filter(p=>p.f===k).length:DATA.filter(p=>p.c===k).length;return `<button class="chip" data-f="${k}" aria-pressed="false">${v}<span class="k">${n}</span></button>`}).join("");
+document.getElementById("chips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(b){state.f=b.dataset.f;render()}});
+document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value;render()});
+render();
+</script>

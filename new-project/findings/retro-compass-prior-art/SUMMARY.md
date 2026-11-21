@@ -27,6 +27,9 @@ Date: 21 Nov 2026 (event day; submissions 18:00). Owner chose Track 2 Retro Remi
   re-check on NOAA calculator before putting numbers on screen. Keep cinematic part 15–40 s, total <=2:30.
 - Main agent re-checked: Luma page, X Marks the Spot, Agora, CampMap pages, Terra GitHub issues, ST_AZIMUTH docs.
 
+## Gallery
+[`gallery/index.html`](gallery/index.html): all 59 projects from the two prior-art reports, each with a picture (the project's own preview image or its video thumbnail, checked by eye), name, where and when, one line and a link. Two projects have no usable picture and show a placeholder. The pictures are third-party content, kept for reference only. Rebuild: `python3 tools/build.py <dir with projects.json, template.html and img/>`.
+
 ## Limits
 Reddit, Kickstarter comments, Bilibili, Hackster blocked; X not searched (no login). No organiser confirmation of rules.
 

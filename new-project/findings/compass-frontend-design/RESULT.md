@@ -48,6 +48,7 @@ The full per-candidate data (URLs, stars, license, commit, line anchors, quotes)
 - **How the images were made:** screenshots were taken on 2026-11-21 with headless Chromium (Playwright build 1248) and no compass sensor, so live apps show their no-sensor or permission state. Other images are the projects' own README or store images. The SteelSeries brass view was rendered by us from the library.
 - **Cards without a picture (8):** the reason is given on each card: Product Hunt bot check, a 404, no published screenshot, or no public page.
 - **Third-party content:** the screenshots are third-party content, kept for design reference only.
+- **Build inputs:** `showcase/tools/` holds the item data, image manifest, capture log, page template and the `capture.py` / `build.py` scripts.
 
 ## Limits and gaps
 
