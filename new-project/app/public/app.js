@@ -247,8 +247,11 @@ const linkedinLink = (person, text = 'View LinkedIn profile') =>
 /** Buttons for one person, by where the two of you stand. */
 function actions(person, relation, requestId) {
   const act = (fn) => async (e) => {
-    e.currentTarget.disabled = true;
-    try { await fn(); } catch (ex) { alert(ex.message); }
+    // Keep the button: e.currentTarget is gone after the await. On failure give it back, or the card
+    // (rebuilt only when something visible changes) would leave it disabled for good.
+    const button = e.currentTarget;
+    button.disabled = true;
+    try { await fn(); } catch (ex) { alert(ex.message); button.disabled = false; }
     sync();
   };
   if (relation === 'connected') {
@@ -340,8 +343,10 @@ $('manual').addEventListener('click', () => {
 });
 $('hide').addEventListener('click', async () => {
   state.visible = !state.visible;
+  if (!state.visible) {
+    try { await api('POST', '/api/hide'); } catch (ex) { state.visible = true; alert(`Could not hide you: ${ex.message}`); }
+  }
   $('hide').textContent = state.visible ? 'Go invisible' : 'Become visible';
-  if (!state.visible) await api('POST', '/api/hide').catch(() => {});
   sync();
 });
 
@@ -371,7 +376,16 @@ function enter() {
   show('signup');
 }
 
-$('signin').addEventListener('click', () => { $('signin').disabled = true; state.logto.signIn(); });
+$('signin').addEventListener('click', async () => {
+  $('signin').disabled = true;
+  try { await state.logto.signIn(); } catch (ex) {
+    $('welcome-error').textContent = `Sign-in could not start: ${ex.message}`;
+    $('welcome-error').hidden = false;
+    $('signin').disabled = false;
+  }
+});
+// Back from the sign-in page brings this page back exactly as it was left: button still disabled.
+window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = false; });
 $('quick').addEventListener('click', () => show('signup'));
 
 (async function boot() {
