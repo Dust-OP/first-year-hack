@@ -9,7 +9,7 @@ This file describes this project only. It does not replace any agent's own globa
 - **Team:** see the repository root [`README.md`](../README.md).
 - **Concept (decided 21 Nov):** a compass that points at nearby people worth working with. Point at someone to see their profile, send an in-app invitation, and after they accept both sides open the other's LinkedIn profile.
 - **Stage:** demo v1 built in [`app/`](app/) (working title "Career Compass"). The final name is not chosen. Not yet run on a real phone or against Snowflake; see [`app/README.md`](app/README.md).
-- **Leading technical direction from research, not yet adopted:**
+- **Technical direction from research, adopted in demo v1:**
   - A phone web app.
   - An SVG compass dial rotated with CSS transforms.
   - Heading input from DeviceOrientation, with the iOS permission prompt handled.
