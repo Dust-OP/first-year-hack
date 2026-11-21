@@ -304,7 +304,7 @@ export function createApi({ store, demo = false, now = () => Date.now(), logto =
     'POST /api/email-code/verify': async (request) => {
       if (!emailCode) return fail(404, 'Email sign-in is not set up on this server.');
       const { code } = await readBody(request);
-      const email = emailCode.verify({ browserKey: codeKeyOf(request), code });
+      const email = await emailCode.verify({ browserKey: codeKeyOf(request), code });
       const token = newToken();
       let user = await store.getUserBySub(EMAIL_SUB + email);
       if (user) {

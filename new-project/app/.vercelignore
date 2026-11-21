@@ -1,0 +1,9 @@
+# Never upload secrets or local-only material to Vercel.
+.env
+.env.*
+*.p8
+*.pem
+node_modules
+test
+dev
+snowflake

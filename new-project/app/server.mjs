@@ -7,13 +7,10 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApi } from './lib/api.mjs';
-import { createEmailCode } from './lib/email-code.mjs';
 import { createLinkedin, linkedinConfigFromEnv } from './lib/linkedin.mjs';
 import { createIdTokenVerifier, logtoConfigFromEnv } from './lib/logto.mjs';
-import { createResendMailer, mailerConfigFromEnv } from './lib/mailer.mjs';
-import { createMemoryStore } from './lib/store-memory.mjs';
-import { createSnowflakeClient, snowflakeConfigFromEnv } from './lib/snowflake.mjs';
-import { createSnowflakeStore } from './lib/store-snowflake.mjs';
+import { mailerConfigFromEnv } from './lib/mailer.mjs';
+import { createStoreFromEnv, emailCodeFromEnv, postgresQueryFromEnv } from './lib/setup.mjs';
 
 try { process.loadEnvFile(new URL('./.env', import.meta.url)); } catch { /* no .env: defaults apply */ }
 
@@ -23,14 +20,13 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 
-const sf = snowflakeConfigFromEnv();
-const store = sf ? createSnowflakeStore(createSnowflakeClient(sf)) : createMemoryStore();
+const pg = await postgresQueryFromEnv();
+const store = await createStoreFromEnv(process.env, pg); // DATABASE_URL -> Postgres, else Snowflake, else memory
 const logto = logtoConfigFromEnv();
 const linkedinCfg = linkedinConfigFromEnv();
-// Email-code sign-in keeps its codes and send limits in this process's memory (lib/email-code.mjs),
-// which is right for this one long-running server and wrong for serverless hosts. So it is enabled here only.
+// Email-code sign-in (RESEND_API_KEY): codes in Postgres when DATABASE_URL is set, else in this process's memory.
 const mailer = mailerConfigFromEnv();
-const emailCode = mailer && createEmailCode({ send: createResendMailer(mailer), appName: process.env.APP_NAME || 'Career Compass' });
+const emailCode = emailCodeFromEnv(process.env, { pg });
 const api = createApi({
   store, demo: process.env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto),
   linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: process.env.PUBLIC_URL || null, emailCode,

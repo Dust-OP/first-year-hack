@@ -2,7 +2,9 @@
 
 Working title. A phone web app for **Track 2: Retro Remix**: the compass no longer points north, it points at the person nearby you should be working with.
 
-Built 21 Nov 2026. No dependencies: Node 20+ only.
+Built 21 Nov 2026. Node 20+. Locally it runs with no install; the one dependency (the Neon Postgres driver) is loaded only when `DATABASE_URL` is set.
+
+**Live:** https://wayrise.app (Vercel project `career-compass`, team `chatgpt-6e55`). The project's generated `*.vercel.app` addresses redirect there. See [Deploy on Vercel](#deploy-on-vercel).
 
 ## The flow
 
@@ -100,17 +102,18 @@ Android only (Chrome):
 | Compass heading from the phone sensor | Written and run in a browser, **not yet run on a phone**. On 21 Nov in headless Chromium 156: Chrome's own virtual orientation sensor (real `deviceorientationabsolute` events, only the hardware pretend) gave the expected heading, to the two decimal places the readout prints, for 24 attitudes: flat, tilted, upright and in both landscapes, including five where the old `360 - alpha` was 20° to 180° out (upright with the wrist twisted; a landscape camera hold leaning past vertical). Those 24 were run with the blend at 50° to 75° of lift; after it moved to 65° to 80° the same virtual sensor was run again for 52 attitudes, portrait and both landscapes: outside the blend the heading was the expected one to within 0.1° (Chrome rounds the angles it sends to 0.1°), a 20° roll of the wrist moved it by 0.00° up to 65° of lift, and the flip came between 21.0° and 21.1° past vertical. Events built in the page covered the iPhone shape (`webkitCompassHeading`, accuracy, the permission answer), missing readings and the fallbacks. What only a phone can show is listed under *What to check on a phone* |
 | Dial physics, lock-on and the picture reveal | Works in Chromium at phone and laptop size, light and dark, and with reduced motion. Measured in the page at 60 frames a second: the dial overshoots a quarter turn by 9.5% and is inside 2% after 0.47 s; a 3 s stall moves it one frame's worth, not three seconds' worth. Safari and Firefox were not run |
 | Profile pictures | The dial shows `picture` when a person carries one (a URL, or `null`). **The server on this branch does not send it yet**, so today everyone appears as large initials. Checked with pictures added to the server's answers on their way to the page: a good one, `null`, slow, missing (404) and not-an-image |
+| Vercel deployment | Deployed 21 Nov (production, London region `lhr1`). Health, static files, `/callback` and the API routes checked on the live URL. **Runs on the in-memory store until the Neon database is connected**; see below |
 | Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
 
 ### Sign-in with an emailed code (wayrise.app)
 
-With `RESEND_API_KEY` in `.env`, the welcome screen asks for an email address and emails a 6-digit code from `hello@wayrise.app` through Resend. It behaves like Logto's email code (10 minutes, a minute between codes), but runs in this server, with no Cila accounts or branding. It replaces the Logto button when both are set up.
+With `RESEND_API_KEY` in `.env`, the welcome screen asks for an email address and emails a 6-digit code from `hello@wayrise.app` through Resend. It behaves like Logto's email code (10 minutes, a minute between codes), but runs in this app, with no Cila accounts or branding. It is on at https://wayrise.app (Vercel) as well as from a laptop. It replaces the Logto button when both are set up.
 
 - **Domain:** `wayrise.app` (Name.com) runs its DNS on Cloudflare. Resend sends from it (region eu-west-1, DKIM, SPF and DMARC records in Cloudflare). Mail sent to `hello@wayrise.app` is forwarded to a team member's Gmail by Cloudflare Email Routing. Both directions were tested on 21 Nov.
 - **How it works:** `POST /api/email-code/start {email}` emails the code and sets an HttpOnly cookie `cc_ec` holding a random key for this browser. `POST /api/email-code/verify {code}` checks the code against that browser's record and issues the app's session like the other sign-ins. Users are stored with `sub = 'email|<address>'` and are not merged with Logto or LinkedIn accounts that share the address.
 - **Limits:** 5 wrong codes per code. Codes to one address: one a minute, five an hour. One client (IP address): ten an hour. All addresses together: 90 a day, under Resend's free 100 a day. `/start` never looks up accounts, so its answer is the same for known and unknown addresses.
-- **Where that state lives:** in the server process's memory (`lib/email-code.mjs`). That is exact for `npm start`, but it is not shared between processes and is lost on restart. So only `server.mjs` turns this on. Do not enable it on Vercel or any other multi-instance host without moving the state to a shared store.
+- **Where that state lives:** with `DATABASE_URL` set (Vercel), in Postgres (`lib/email-code-postgres.mjs`: tables `email_codes` and `email_code_sends`, made on first use), shared by every instance; single use and the wrong-guess count are atomic, and the send log keeps only SHA-256 hashes of the address and IP for a day. Without a database, in the server process's memory (`lib/email-code.mjs`), which is exact for one `npm start` and lost on restart. The Vercel entry (`api/index.mjs`) never uses the memory version: without a database it leaves email-code sign-in off. Codes are stored as an HMAC keyed by the browser's cookie key, which is not stored, so reading the tables does not let anyone test codes. `npm run db:check` also runs this state against the database, in a throwaway schema.
 - Behind the `cloudflared` tunnel every request reaches the server from this machine, so the client's address comes from the tunnel's `CF-Connecting-IP` header. That header is trusted only on requests from this machine.
 - Tests use a fake mailer (`test/email-code.test.mjs`); nothing is sent.
 
@@ -209,6 +212,32 @@ This has not been done. A test browser stands in for the phones' GPS, not for th
 - A picked photo is stored as it was sent (a 256 px JPEG made in the browser; the original file is not uploaded). The API can replace or remove it (`POST /api/profile` with `photo`), but the page shows the profile form only once, so there is no way in the page yet to change or remove a photo afterwards. There is no delete-account route, and none is planned.
 - Text taken from an address is never displayed. A failed sign-in comes back as a short code and the page shows its own sentence for it.
 
+## Deploy on Vercel
+
+The same API runs as one Vercel Function: `api/index.mjs` builds it with `lib/setup.mjs`, exactly as `server.mjs` does locally. `vercel.json` sends every `/api/*` request to that function, serves `public/` as static files, rewrites `/callback` to the page and pins the function to London (`lhr1`). `.vercelignore` keeps `.env`, keys, tests and the Snowflake scripts out of the upload.
+
+**Database.** Serverless functions do not share memory, so the deployed app needs a real database: Neon Postgres from the Vercel Marketplace. The integration sets `DATABASE_URL` on the project; `lib/store-postgres.mjs` then creates its three tables (`users`, `locations`, `requests`) on first use. Bearing and distance are computed in JS after a bounding-box query, so no PostGIS is needed. Store choice everywhere: `DATABASE_URL` → Postgres, else `SNOWFLAKE_ACCOUNT` → Snowflake, else memory.
+
+Logto keeps its own accounts in its own database on the self-hosted server. This database holds the app's side: the profile linked to each Logto user id (`logto_sub`), session token hashes, positions and invitations.
+
+Set up once, from `new-project/app` (a person has to accept Neon's terms):
+
+```sh
+vercel link --yes --scope chatgpt-6e55 --project career-compass   # already done on 21 Nov
+vercel integration add neon --name career-compass-db --meta region=lhr1
+vercel env pull .env.local        # DATABASE_URL for local checks; .env.local is git-ignored
+npm install
+npm run db:check                  # full flow in a throwaway schema, then drops it
+vercel env add DEMO production    # value 1 keeps the demo button and quick sign-up
+vercel deploy --prod
+```
+
+To switch on Logto sign-in on the live site, add `https://wayrise.app/callback` (redirect) and `https://wayrise.app` (post sign-out) to the Logto application, then `vercel env add LOGTO_APP_ID production` and deploy again.
+
+**Domain.** `wayrise.app` is attached to the project. Its DNS is on Cloudflare: two `A` records for `@`, `216.198.79.1` and `64.29.17.1`, proxy off (DNS only) so Vercel can issue the certificate. Email records (MX) on the domain belong to the email sign-in and are not Vercel's. `vercel.json` redirects the generated addresses `career-compass-hazel-ten.vercel.app` and `career-compass-chatgpt-6e55.vercel.app` to `https://wayrise.app`, so register sign-in redirect addresses for `wayrise.app` only. Check with `vercel domains verify wayrise.app`.
+
+Deployment URLs (`career-compass-<hash>-…vercel.app`) sit behind Vercel Authentication; `wayrise.app` is public. GitHub is not connected to the project, so a push does not deploy.
+
 ## Snowflake
 
 The Snowflake store keeps users, positions and invitations in three tables and lets **Snowflake compute the compass**: `ST_DWITHIN` finds who is in range, `ST_DISTANCE` the distance and `ST_AZIMUTH` the bearing. The research in `../findings/snowflake-real-projects/` found no hackathon project doing bearings in Snowflake. The *Demo tools* panel shows the exact SQL, row count and latency of the last query, for the judges.
@@ -237,8 +266,11 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 | Path | What it is |
 |---|---|
 | `server.mjs` | Local server: static files plus the API |
+| `api/index.mjs`, `vercel.json`, `.vercelignore` | Vercel entry point and config |
+| `lib/setup.mjs` | Picks the store and sign-in from environment variables; shared by both entry points |
+| `lib/store-postgres.mjs`, `postgres/check.mjs` | Postgres store (Neon on Vercel) and its one-command check |
 | `lib/api.mjs` | All API routes as one `(Request) => Response` function |
-| `lib/email-code.mjs`, `lib/mailer.mjs`, `public/email-code.js` | Sign-in with an emailed code: codes and limits, sending through Resend, the email and code form |
+| `lib/email-code.mjs`, `lib/email-code-postgres.mjs`, `lib/mailer.mjs`, `public/email-code.js` | Sign-in with an emailed code: codes and limits, sending through Resend, the email and code form |
 | `lib/logto.mjs`, `public/auth.js` | Email sign-in: server-side ID token check, browser-side OpenID Connect flow |
 | `dev/mock-oidc.mjs` | Local stand-in for Logto, for tests and offline tries |
 | `lib/linkedin.mjs` | Sign in with LinkedIn, server side: the redirect to LinkedIn, the code exchange with the client secret, the userinfo call, and what is kept from the answer |

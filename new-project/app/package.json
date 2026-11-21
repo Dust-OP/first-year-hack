@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Demo v1: a compass that points at people worth working with, then hands off to LinkedIn.",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node --watch server.mjs",
     "start": "node server.mjs",
@@ -12,6 +14,10 @@
     "test": "node --test \"test/*.test.mjs\"",
     "mock-signin": "node dev/mock-oidc.mjs",
     "mock-linkedin": "node dev/mock-linkedin.mjs",
-    "snowflake:check": "node snowflake/check.mjs"
+    "snowflake:check": "node snowflake/check.mjs",
+    "db:check": "node postgres/check.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0"
   }
 }

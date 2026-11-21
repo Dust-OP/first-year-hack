@@ -2,15 +2,18 @@
 // Behaves like Logto's email passwordless flow: a 6-digit code, valid for
 // 10 minutes, a short wait before another code can be sent.
 //
-// Where the state lives: in this module's memory, inside the one Node process
-// that server.mjs runs. Each code is a record keyed by a random browser key,
-// which the browser holds in an HttpOnly cookie (lib/api.mjs sets it). The record
-// keeps the address, an HMAC of the code, the expiry and the wrong guesses.
-// So a code can only be redeemed by the browser that asked for it, at most
-// MAX_TRIES wrong guesses are allowed, and a code works once.
-// This is NOT shared between processes: do not turn email-code sign-in on where
-// several instances serve the app (serverless hosts). server.mjs is the only
-// place that enables it.
+// Each code is a record keyed by a hash of a random browser key, which the
+// browser holds in an HttpOnly cookie (lib/api.mjs sets it). The record keeps
+// the address, an HMAC of the code keyed by that browser key, the expiry and
+// the wrong guesses. So a code can only be redeemed by the browser that asked
+// for it, at most MAX_TRIES wrong guesses are allowed, and a code works once.
+// Whoever reads the stored records cannot test codes: the browser key is not stored.
+//
+// Where the state lives (`state`): createMemoryCodeState() below keeps it in
+// this process, which is right for the one long-running server.mjs and wrong
+// where several instances serve the app. On Vercel it is
+// createPostgresCodeState() (lib/email-code-postgres.mjs), shared by every
+// instance; lib/setup.mjs makes that choice.
 
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 
@@ -20,7 +23,7 @@ const RESEND_WAIT_MS = 60_000; // between two codes to the same address
 const MAX_PER_ADDRESS_HOUR = 5;
 const MAX_PER_CLIENT_HOUR = 10; // one client (IP address) asking for codes to many addresses
 const MAX_PER_DAY = 90; // all addresses together: Resend's free plan allows 100 emails a day
-const HOUR = 3_600_000, DAY = 24 * HOUR;
+export const HOUR = 3_600_000, DAY = 24 * HOUR;
 
 /** Lower-cased address, or null when it does not look like one. */
 export function normEmail(input) {
@@ -46,30 +49,47 @@ export class CodeError extends Error {
 }
 
 /**
- * @param send  async ({ to, subject, text, html }) => void   (lib/mailer.mjs, or a fake in tests)
+ * The state in this process's memory. Every method is async so the Postgres version
+ * (lib/email-code-postgres.mjs) can stand in for it unchanged.
  */
-export function createEmailCode({ send, appName = 'Career Compass', now = () => Date.now(), makeCode, log = console.error }) {
-  const key = randomBytes(32); // hashes codes in memory; never leaves the process
-  const mac = (browserKey, code) => createHmac('sha256', key).update(`${browserKey}|${code}`).digest();
+export function createMemoryCodeState() {
+  const codes = new Map(); // keyId -> { email, mac, expiresMs, tries }
+  let sends = []; // { email, client, t }, last day
+  return {
+    async prune(t) {
+      for (const [k, c] of codes) if (c.expiresMs < t) codes.delete(k);
+      sends = sends.filter((x) => t - x.t < DAY);
+    },
+    async sends({ email, client, t }) {
+      const hour = sends.filter((x) => t - x.t < HOUR);
+      const mine = hour.filter((x) => x.email === email);
+      return {
+        lastForAddress: mine.length ? mine.at(-1).t : null,
+        addressHour: mine.length,
+        clientHour: hour.filter((x) => x.client === client).length,
+        day: sends.length,
+      };
+    },
+    async recordSend({ email, client, t }) { sends.push({ email, client, t }); },
+    async putCode(id, rec) { codes.set(id, { ...rec }); },
+    async getCode(id) { const c = codes.get(id); return c ? { ...c } : null; },
+    /** Counts one more wrong guess; returns the new count. */
+    async addTry(id) { const c = codes.get(id); if (!c) return Infinity; c.tries += 1; return c.tries; },
+    /** Removes the code if its HMAC still matches and returns its address; null if it is already gone. */
+    async takeCode(id, mac) { const c = codes.get(id); if (!c || c.mac !== mac) return null; codes.delete(id); return c.email; },
+    async dropCode(id) { codes.delete(id); },
+  };
+}
+
+/**
+ * @param send   async ({ to, subject, text, html }) => void   (lib/mailer.mjs, or a fake in tests)
+ * @param state  where codes and send times live (createMemoryCodeState, or the Postgres one)
+ */
+export function createEmailCode({ send, appName = 'Career Compass', now = () => Date.now(), makeCode, log = console.error, state = createMemoryCodeState() }) {
+  const mac = (browserKey, code) => createHmac('sha256', String(browserKey)).update(String(code)).digest('hex');
   const keyId = (browserKey) => createHash('sha256').update(String(browserKey)).digest('hex');
   const newCode = makeCode ?? (() => String(randomInt(0, 1_000_000)).padStart(6, '0'));
-
-  const codes = new Map(); // keyId(browser key) -> { email, mac, expiresMs, tries }
-  const byAddress = new Map(); // email -> [send times, last hour]
-  const byClient = new Map(); // client -> [send times, last hour]
-  let daily = []; // send times, last day
-
-  function prune() {
-    const t = now();
-    for (const [k, c] of codes) if (c.expiresMs < t) codes.delete(k);
-    for (const m of [byAddress, byClient]) {
-      for (const [k, list] of m) {
-        const kept = list.filter((s) => t - s < HOUR);
-        kept.length ? m.set(k, kept) : m.delete(k);
-      }
-    }
-    daily = daily.filter((s) => t - s < DAY);
-  }
+  const same = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
 
   return {
     ttlMs: CODE_TTL_MS,
@@ -83,18 +103,15 @@ export function createEmailCode({ send, appName = 'Career Compass', now = () => 
     async start({ email: rawEmail, browserKey, client = 'unknown' }) {
       const email = normEmail(rawEmail);
       if (!email) throw new CodeError('Please enter a valid email address.');
-      prune();
       const t = now();
-      const mine = byAddress.get(email) ?? [];
-      const theirs = byClient.get(client) ?? [];
-      if (mine.length && t - mine.at(-1) < RESEND_WAIT_MS) throw new CodeError('Please wait a minute before asking for another code.', 429);
-      if (mine.length >= MAX_PER_ADDRESS_HOUR || theirs.length >= MAX_PER_CLIENT_HOUR) throw new CodeError('Too many codes asked for. Please try again later.', 429);
-      if (daily.length >= MAX_PER_DAY) throw new CodeError('Sign-in by email is busy today. Please try again later.', 429);
+      await state.prune(t);
+      const seen = await state.sends({ email, client, t });
+      if (seen.lastForAddress !== null && t - seen.lastForAddress < RESEND_WAIT_MS) throw new CodeError('Please wait a minute before asking for another code.', 429);
+      if (seen.addressHour >= MAX_PER_ADDRESS_HOUR || seen.clientHour >= MAX_PER_CLIENT_HOUR) throw new CodeError('Too many codes asked for. Please try again later.', 429);
+      if (seen.day >= MAX_PER_DAY) throw new CodeError('Sign-in by email is busy today. Please try again later.', 429);
 
       // Counted before sending, so a slow or failing mail service cannot be used to skip the limits.
-      byAddress.set(email, [...mine, t]);
-      byClient.set(client, [...theirs, t]);
-      daily.push(t);
+      await state.recordSend({ email, client, t });
 
       const code = newCode();
       try {
@@ -103,31 +120,31 @@ export function createEmailCode({ send, appName = 'Career Compass', now = () => 
         log('[email-code] send failed:', err.message);
         throw new CodeError('The code could not be sent. Please try again in a minute.', 502);
       }
-      codes.set(keyId(browserKey), { email, mac: mac(browserKey, code), expiresMs: t + CODE_TTL_MS, tries: 0 });
+      await state.putCode(keyId(browserKey), { email, mac: mac(browserKey, code), expiresMs: t + CODE_TTL_MS, tries: 0 });
       return { email, expiresMs: t + CODE_TTL_MS };
     },
 
     /** Returns the verified address, or throws a CodeError. */
-    verify({ browserKey, code: rawCode }) {
+    async verify({ browserKey, code: rawCode }) {
       const id = browserKey ? keyId(browserKey) : null;
-      const rec = id && codes.get(id);
+      const rec = id && (await state.getCode(id));
       if (!rec) throw new CodeError('Please ask for a code first, in this browser.');
       if (now() > rec.expiresMs) {
-        codes.delete(id);
+        await state.dropCode(id);
         throw new CodeError('This code has expired. Please ask for a new one.');
       }
       const code = String(rawCode ?? '').replace(/\s+/g, '');
       const got = mac(browserKey, /^\d{6}$/.test(code) ? code : 'x');
-      if (!timingSafeEqual(rec.mac, got)) {
-        rec.tries += 1;
-        if (rec.tries >= MAX_TRIES) {
-          codes.delete(id);
+      if (!same(rec.mac, got)) {
+        if ((await state.addTry(id)) >= MAX_TRIES) {
+          await state.dropCode(id);
           throw new CodeError('Too many wrong codes. Please ask for a new one.', 429);
         }
         throw new CodeError('That code is not right. Please check the email and try again.');
       }
-      codes.delete(id); // single use
-      return rec.email;
+      const email = await state.takeCode(id, rec.mac); // single use, even when two requests race
+      if (!email) throw new CodeError('Please ask for a code first, in this browser.');
+      return email;
     },
   };
 }
