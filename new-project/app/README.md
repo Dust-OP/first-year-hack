@@ -111,7 +111,9 @@ The app role cannot delete users, so the two check accounts from that run ("Chec
 | `snowflake/setup.sql`, `snowflake/check.mjs` | Account setup and the one-command check |
 | `public/compass.js` | **The dial.** Restyle or replace this file; keep `createCompass`, `setPeople` and `render` and nothing else needs to change |
 | `public/heading.js` | Phone heading: iOS permission, Android absolute orientation, manual fallback |
-| `public/app.js`, `index.html`, `style.css` | Screens, location, polling, the card and the inbox |
+| `public/app.js`, `index.html` | Screens, location, polling, the card and the inbox |
+| `public/style.css` | The look: Apple-style liquid glass, Apple system colours (light and dark), fade transitions for every view, sheet and button state |
+| `public/motion.js` | Presentation only: adds the in-between animation stages (busy shimmer while a request runs, rows sliding and fading in the People lists, card cross-fade). Deleting it leaves the app working |
 | `test/*.test.mjs` | Tests |
 
 ## Next
