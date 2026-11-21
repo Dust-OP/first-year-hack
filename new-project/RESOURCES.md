@@ -18,6 +18,7 @@ If something is not in this list, it has not been collected yet. Add it here whe
 | Front-end recommendation: dial, heading input, demo mode | [`findings/compass-frontend-design/RESULT.md`](findings/compass-frontend-design/RESULT.md) |
 | Front-end candidates: 26 GitHub projects and demos, with source line anchors | [`findings/compass-frontend-design/github-frontend.md`](findings/compass-frontend-design/github-frontend.md) |
 | Front-end candidates: 17 with community reception | [`findings/compass-frontend-design/community-reception.md`](findings/compass-frontend-design/community-reception.md) |
+| Visual showcase of all 47 front-end candidates and leads: screenshots, tech, licence, what to borrow, filters | [`findings/compass-frontend-design/showcase/index.html`](findings/compass-frontend-design/showcase/index.html). Published copy: https://claude.ai/artifact/Ho9vk78aBfuxteoMkCob7N (private to its owner until shared from the page's Share menu) |
 | Source notes (`E-*.json`) behind the findings | `findings/*/evidence/` |
 | Research method and helper (`loop.mjs`) | [`../reference-loop/`](../reference-loop/) |
 | Tools the team used or checked | [`../TOOL-INVENTORY.md`](../TOOL-INVENTORY.md) |
@@ -40,7 +41,6 @@ Other sessions are still working on these. Their owners will add the results; do
 | Work | Expected location | State at 11:50 |
 |---|---|---|
 | Snowflake in real hackathon projects: what Snowflake does in each, SQL and features used, roles and privileges, trial-account failures; a setup script outline | `findings/snowflake-real-projects/` | Task brief only (uncommitted) |
-| Visual showcase of every front-end candidate, so the team can see what each looks like | `findings/compass-frontend-design/showcase/` | In progress (uncommitted) |
 | Prior-art list with screenshots of each project | Not decided by its owner yet | In progress |
 | Demo showcase and video brainstorming | Not started | Next, after the resources are collected |
 

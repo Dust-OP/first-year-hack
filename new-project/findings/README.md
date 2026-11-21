@@ -12,6 +12,7 @@ Nothing in this folder is product code, and nothing here has been adopted until 
 
 - **Entry file:** `RESULT.md` or `SUMMARY.md`. It holds the recommendation, the limits, the adoption state and the next check.
 - **Worker reports:** `*.md` files with the per-candidate detail (URLs, versions, license, quotes, status labels).
+- **`showcase/`** (optional): a visual gallery, `index.html` plus `img/`, showing what each candidate looks like.
 - **`evidence/`:** `E-*.json` source notes recorded with the reference-loop helper (`loop.mjs note`). Each note names its source URL, the claim it supports and the observation time.
 
 ## Evidence labels

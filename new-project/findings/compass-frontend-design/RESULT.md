@@ -41,6 +41,14 @@ Status: **research complete, nothing adopted yet**. The team has not chosen a vi
 
 The full per-candidate data (URLs, stars, license, commit, line anchors, quotes) is in [`github-frontend.md`](github-frontend.md) and [`community-reception.md`](community-reception.md).
 
+## Visual showcase
+
+[`showcase/index.html`](showcase/index.html) shows every candidate plus 6 leads, 47 cards in all, each with screenshots, tech, licence, what to borrow and reception. A published copy is at https://claude.ai/artifact/Ho9vk78aBfuxteoMkCob7N; it is private until shared.
+
+- **How the images were made:** screenshots were taken on 2026-11-21 with headless Chromium (Playwright build 1248) and no compass sensor, so live apps show their no-sensor or permission state. Other images are the projects' own README or store images. The SteelSeries brass view was rendered by us from the library.
+- **Cards without a picture (8):** the reason is given on each card: Product Hunt bot check, a 404, no published screenshot, or no public page.
+- **Third-party content:** the screenshots are third-party content, kept for design reference only.
+
 ## Limits and gaps
 
 - **Reddit was not inspected.** WebFetch refuses reddit.com, old.reddit and web.archive.org. WebSearch rejects the reddit.com domain filter. Direct curl was denied by the permission classifier. No Reddit thread is counted. *Next check:* a team member opens Reddit search in a normal browser for "compass" in r/web_design, r/threejs, r/InternetIsBeautiful and r/creativecoding, and pastes the threads in.

@@ -40,6 +40,7 @@ first-year-hack/                  repository root
             ├── RESULT.md
             ├── github-frontend.md       26 GitHub/demo candidates, source read, line anchors
             ├── community-reception.md   17 candidates with community reception and tech feedback
+            ├── showcase/                visual gallery: index.html + img/ screenshots of every candidate
             └── evidence/
 ```
 
