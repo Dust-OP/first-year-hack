@@ -109,6 +109,20 @@ $('photo').addEventListener('change', async (e) => {
   }
 });
 
+// LinkedIn never tells apps your profile address, so you copy its share link yourself.
+// "Open my LinkedIn" (index.html) goes to linkedin.com/in/me, your own profile when you are signed in there.
+if (navigator.clipboard?.readText) {
+  $('linkedin-paste').hidden = false;
+  $('linkedin-paste').addEventListener('click', async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) $('linkedin-input').value = text;
+    } catch {
+      $('linkedin-input').focus(); // permission refused: the keyboard's own paste still works
+    }
+  });
+}
+
 $('signup').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
@@ -664,8 +678,12 @@ function enter() {
   if (!state.me.needsProfile) return show('compass');
   const viaLinkedin = state.me.signedInWith === 'linkedin';
   $('signup-lede').textContent = viaLinkedin
-    ? 'You are signed in with LinkedIn. LinkedIn does not tell apps your profile address, so please add it here, and say what you offer and what you are looking for.'
+    ? 'You are signed in with LinkedIn, so we have your name and photo. One more step: LinkedIn does not tell apps your profile link, so please paste its share link here.'
     : 'You are signed in. Tell people who you are, so the compass has something to show them.';
+  // A LinkedIn sign-in already gave us the name and photo: ask only for the share link
+  // (and the name too, in the rare case LinkedIn sent none).
+  $('signup').classList.toggle('linkedin-only', viaLinkedin);
+  $('name-field').classList.toggle('keep', viaLinkedin && !state.me.name);
   $('signup-submit').textContent = 'Save my profile';
   $('signup').elements.name.value = state.me.name ?? '';
   // The picture people will see: the LinkedIn photo, or initials until a photo is picked.
@@ -689,7 +707,11 @@ $('signin-linkedin').addEventListener('click', () => {
   setTimeout(() => { $('signin-linkedin').disabled = false; }, 8000); // the page was never left
 });
 // Back from the sign-in page brings this page back exactly as it was left: buttons still disabled.
-window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = $('signin-linkedin').disabled = false; });
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted || !state.signinOn) return;
+  $('signin').disabled = !state.logto;
+  $('signin-linkedin').disabled = !state.signinOn.linkedin;
+});
 $('quick').addEventListener('click', () => show('signup'));
 
 (async function boot() {
@@ -699,11 +721,22 @@ $('quick').addEventListener('click', () => show('signup'));
   state.logto = health.auth ? createLogto(health.auth) : null;
   $('seed').hidden = !state.demo;
   $('quick').hidden = !health.quickSignup;
-  // With our own emailed codes on, they replace the Logto button.
-  $('signin').hidden = $('signin-fine').hidden = !state.logto || Boolean(health.emailCode);
+  // Both ways to sign in are always offered. One this server has not set up stays visible but greyed out,
+  // so the choice never silently disappears (it did when .env had neither LOGTO_APP_ID nor LINKEDIN_*).
+  // Email means our own emailed code when it is on (RESEND_API_KEY), which replaces the Logto button.
+  state.signinOn = { email: Boolean(health.emailCode || state.logto), linkedin: Boolean(health.linkedin) };
+  const notSetUp = 'Not set up on this server yet.';
   $('email-code').hidden = !health.emailCode;
-  $('signin-linkedin').hidden = $('signin-linkedin-fine').hidden = !health.linkedin;
-  if (health.linkedin && state.logto) $('signin').className = 'ghost'; // one main button: LinkedIn
+  $('signin').hidden = $('signin-fine').hidden = Boolean(health.emailCode);
+  $('signin').disabled = !state.logto;
+  $('signin-linkedin').disabled = !state.signinOn.linkedin;
+  if (!state.logto) $('signin-fine').textContent = notSetUp;
+  if (!state.signinOn.linkedin) $('signin-linkedin-fine').textContent = notSetUp;
+  if (state.signinOn.linkedin || !state.logto) $('signin').className = 'ghost'; // one main button
+  if (!state.signinOn.email && !state.signinOn.linkedin && !health.quickSignup) {
+    $('welcome-error').textContent = 'No way to sign in is set up on this server yet.';
+    $('welcome-error').hidden = false;
+  }
   if (health.linkedin?.standIn) $('signin-linkedin').textContent = 'Sign in with LinkedIn (local stand-in)';
   renderEngine();
 
@@ -746,5 +779,5 @@ $('quick').addEventListener('click', () => show('signup'));
       state.token = null;
     }
   }
-  show(state.logto || health.linkedin || health.emailCode ? 'welcome' : 'signup');
+  show('welcome');
 })();
