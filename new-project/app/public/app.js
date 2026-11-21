@@ -1,6 +1,6 @@
 // Career Compass, demo v1: wires sign-up, location, heading, the dial and the inbox together.
 
-import { createLogto } from './auth.js';
+import { createLogto, linkedin } from './auth.js';
 import { createCompass } from './compass.js';
 import { playConfirm } from './confirm.js';
 import { createHeading } from './heading.js';
@@ -10,8 +10,11 @@ import { createReveal } from './reveal.js';
 import { TUNING } from './tuning.js';
 
 const SYNC_MS = 3000; // how often we report position and refresh who is around
+const SYNC_TIMEOUT_MS = 10_000; // an answer that has not come by then is given up, so the next tick can ask again
 const AIM_DEG = 15; // "pointing at someone" = within this many degrees of straight ahead
-const BUSH_HOUSE = { lat: 51.5131, lon: -0.1174, accuracy: 5 }; // demo fallback position
+const BUSH_HOUSE = { lat: 51.5131, lon: -0.1174, accuracy: 5 }; // demo position: only ever used when someone chooses it
+const ROUGH_M = 100; // a position less accurate than this cannot point at a person
+const PHOTO_PX = 256; // picked photos are cropped square and shrunk to this before upload
 const TAGS = ['frontend', 'backend', 'design', 'machine learning', 'data', 'product', 'co-founder', 'mentor'];
 
 const $ = (id) => document.getElementById(id);
@@ -35,7 +38,8 @@ const state = {
   logto: null, // email sign-in, when the server has it configured
   running: false,
   visible: true,
-  position: null, // { lat, lon, accuracy, demo? }
+  position: null, // { lat, lon, accuracy, demo? }. Stays null until the phone gives one or the demo position is chosen.
+  locationProblem: null, // why there is no position: 'insecure' | 'unsupported' | 'denied' | 'unavailable'
   nearby: [],
   inbox: { incoming: [], outgoing: [], connections: [] },
   shown: 0, // heading that is on screen: the sensor or hand heading, after the spring
@@ -45,11 +49,13 @@ const state = {
   engine: null,
 };
 
-async function api(method, path, body) {
+/** `timeoutMs`: give up after this long (the request is aborted and this throws a TimeoutError). */
+async function api(method, path, body, timeoutMs) {
   const res = await fetch(path, {
     method,
     headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
+    signal: timeoutMs ? AbortSignal.timeout?.(timeoutMs) : undefined,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(data.error ?? `Request failed (${res.status})`), { status: res.status });
@@ -75,6 +81,33 @@ for (const box of document.querySelectorAll('.chips')) {
   }
 }
 
+/** The picked image, cropped to a centred square and shrunk, as a JPEG data URL (about 10-30 kB). */
+async function shrinkPhoto(file) {
+  const img = await createImageBitmap(file);
+  const side = Math.min(img.width, img.height);
+  const canvas = h('canvas', { width: PHOTO_PX, height: PHOTO_PX });
+  canvas.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, PHOTO_PX, PHOTO_PX);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+let pickedPhoto; // undefined = leave the picture as it is
+$('photo').addEventListener('change', async (e) => {
+  const err = $('signup-error');
+  err.hidden = true;
+  const [file] = e.target.files;
+  if (!file) return; // cancelled: the photo the preview shows is still the one that will be saved
+  try {
+    pickedPhoto = await shrinkPhoto(file);
+    $('photo-preview').src = pickedPhoto;
+    $('photo-preview').hidden = false;
+  } catch {
+    // An earlier good pick stays: the preview still shows it, so it is what gets saved.
+    e.target.value = '';
+    err.textContent = 'That image could not be read. Please pick another one.';
+    err.hidden = false;
+  }
+});
+
 $('signup').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
@@ -83,10 +116,10 @@ $('signup').addEventListener('submit', async (e) => {
   try {
     const fields = {
       name: f.get('name'), headline: f.get('headline'), linkedin: f.get('linkedin'),
-      offers: f.getAll('offers'), seeks: f.getAll('seeks'),
+      offers: f.getAll('offers'), seeks: f.getAll('seeks'), photo: pickedPhoto,
     };
     if (state.me) {
-      // Signed in with email already: this form completes the profile.
+      // Signed in with LinkedIn or email already: this form completes the profile.
       state.me = (await api('POST', '/api/profile', fields)).me;
     } else {
       const out = await api('POST', '/api/signup', fields);
@@ -147,10 +180,12 @@ function renderStatus() {
   const el = $('status');
   if (!state.running) return;
   const parts = [];
+  const pos = state.position;
   if (!state.visible) parts.push('You are invisible. Nobody can point at you.');
-  else if (!state.position) parts.push('Finding your position…');
-  else if (state.position.demo) parts.push('Demo position: Bush House.');
-  else parts.push(`Position accurate to about ${Math.round(state.position.accuracy)} m.`);
+  else if (!pos) parts.push(state.locationProblem ? 'No position, so you are not on anyone’s compass.' : 'Finding your position…');
+  else if (pos.demo) parts.push('Demo position: Bush House.');
+  else if (pos.accuracy > ROUGH_M) parts.push(`Your position is only good to about ${Math.round(pos.accuracy)} m, too rough to point at people. Step outside; on iPhone, turn on Precise Location for this site.`);
+  else parts.push(`Position accurate to about ${Math.round(pos.accuracy)} m.`);
 
   if (heading.source === 'manual' && heading.byChoice) parts.push('Turning by hand: drag or flick the dial.');
   else if (heading.source === 'manual') parts.push('No compass sensor answered on this device, so you turn by hand: drag or flick the dial, scroll over it, or use the arrow keys.');
@@ -164,25 +199,89 @@ function renderStatus() {
   el.textContent = parts.join(' ');
 }
 
-function startLocation() {
-  const fallback = (why) => {
-    if (!state.position) state.position = { ...BUSH_HOUSE, demo: true };
-    console.warn('Location unavailable, using the demo position:', why);
-    renderStatus();
-  };
-  if (!('geolocation' in navigator) || !window.isSecureContext) return fallback('needs HTTPS');
-  navigator.geolocation.watchPosition(
-    (p) => { state.position = { lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy }; renderStatus(); },
-    (e) => fallback(e.message),
-    { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 },
-  );
+// ---------- location ----------
+// A real person is never put at a made-up position. With no position they are simply off every
+// compass, and the page says why and what to do. The fixed demo position exists only as a button.
+
+const LOCATE_HELP = {
+  insecure: 'This page was opened over plain http, and phones only share their location with https pages. Open the https address instead: on the laptop that runs the app, “npm run phones” prints it with a QR code.',
+  unsupported: 'This browser cannot share a location, so the compass has nowhere to point from. Try Safari or Chrome.',
+  denied: 'Location access is off for this page, so nobody can find you and you cannot find them. Allow location for this site in your browser’s settings (iPhone: Settings, Privacy & Security, Location Services, Safari Websites), then tap “Try again”. If nothing happens, reload the page.',
+  unavailable: 'Your device has not found its position yet. That is common indoors: go near a window or step outside, then tap “Try again”.',
+};
+const ON_DEMO = 'You are on a demo position (Bush House, London), not where you really are. Everyone who chooses it stands on the same spot, so it is only good for trying the app with demo people.';
+
+function renderLocate() {
+  const onDemo = Boolean(state.position?.demo);
+  const problem = state.position ? null : state.locationProblem;
+  $('locate').hidden = !state.running || (!problem && !onDemo);
+  $('locate-text').textContent = onDemo ? ON_DEMO : LOCATE_HELP[problem] ?? '';
+  $('locate-retry').textContent = onDemo ? 'Use my real position' : 'Try again';
+  $('locate-retry').hidden = problem === 'insecure' || problem === 'unsupported';
+  $('locate-demo').hidden = onDemo || !state.demo;
 }
 
+let watchId = null;
+function stopWatching() {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+}
+
+/** We no longer know where this person is: take them off other people's compasses now, not 45 s later. */
+function losePosition(problem) {
+  const wasShared = Boolean(state.position);
+  state.position = null;
+  state.locationProblem = problem;
+  if (wasShared) api('POST', '/api/hide').catch(() => {});
+  renderStatus();
+  renderLocate();
+}
+
+function startLocation() {
+  stopWatching();
+  if (state.position?.demo) losePosition(null); // leaving the demo position for the real one
+  if (!window.isSecureContext) return losePosition('insecure');
+  if (!('geolocation' in navigator)) return losePosition('unsupported');
+  state.locationProblem = null;
+  watchId = navigator.geolocation.watchPosition(
+    (p) => {
+      const first = !state.position;
+      state.position = { lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy };
+      state.locationProblem = null;
+      renderStatus();
+      renderLocate();
+      if (first) sync(); // report the first fix at once, so others see this person without waiting a tick
+    },
+    (e) => {
+      if (e.code === e.PERMISSION_DENIED) { stopWatching(); return losePosition('denied'); }
+      // A slow or missed update: keep a position we already have, the watch is still running.
+      if (!state.position) losePosition('unavailable');
+    },
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 },
+  );
+  renderStatus();
+  renderLocate();
+}
+$('locate-retry').addEventListener('click', startLocation);
+$('locate-demo').addEventListener('click', () => {
+  stopWatching();
+  state.position = { ...BUSH_HOUSE, demo: true };
+  state.locationProblem = null;
+  renderStatus();
+  renderLocate();
+  sync();
+});
+
+let syncing = false, syncAgain = false;
 async function sync() {
   if (!state.running || !state.token) return;
+  // One request at a time: over a slow link, overlapping answers could land out of order and show stale people.
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
   try {
     const p = state.visible ? state.position : null;
-    const out = await api('POST', '/api/sync', p ? { lat: p.lat, lon: p.lon, accuracy: p.accuracy } : {});
+    // With a time limit: one answer that never arrives would otherwise hold the guard above for good.
+    const out = await api('POST', '/api/sync', p ? { lat: p.lat, lon: p.lon, accuracy: p.accuracy } : {}, SYNC_TIMEOUT_MS);
     state.nearby = out.nearby;
     state.inbox = { incoming: out.incoming, outgoing: out.outgoing, connections: out.connections };
     state.engine = out.engine;
@@ -193,7 +292,10 @@ async function sync() {
     renderEngine();
   } catch (ex) {
     if (ex.status === 401) return signOut();
-    $('status').textContent = `Cannot reach the server: ${ex.message}`;
+    $('status').textContent = `Cannot reach the server: ${ex.name === 'TimeoutError' ? `no answer after ${SYNC_TIMEOUT_MS / 1000} seconds. Trying again…` : ex.message}`;
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; sync(); }
   }
 }
 
@@ -206,6 +308,8 @@ $('start').addEventListener('click', async () => {
   sync();
   setInterval(sync, SYNC_MS);
 });
+// Coming back to the page (phone unlocked, tab switched back): show up again at once, not on the next tick.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
 
 // Turning by hand (laptops, refused permission, or a drifting indoor compass). Every input here
 // moves the one heading in heading.js, which is a wheel with friction, and the dial follows that
@@ -446,7 +550,7 @@ function renderCard() {
   const where = p.spreadDeg > 35 ? `about ${p.distanceM} m, direction uncertain` : `${p.distanceM} m away`;
   // replaceChildren would print a null as the word "null", so drop the empty slots first.
   card.replaceChildren(...[
-    h('div', { class: 'card-head' }, h('h2', {}, p.name), h('span', { class: 'where' }, where)),
+    h('div', { class: 'card-head' }, h('div', { class: 'row-head' }, p.picture ? h('img', { class: 'avatar', src: p.picture, alt: '' }) : null, h('h2', {}, p.name)), h('span', { class: 'where' }, where)),
     p.headline ? h('p', {}, p.headline) : null,
     why(p),
     tags(p),
@@ -462,7 +566,7 @@ function renderCard() {
 function row(item, relation) {
   const p = item.person;
   return h('article', { class: 'row' },
-    h('h3', {}, p.name),
+    h('div', { class: 'row-head' }, p.picture ? h('img', { class: 'avatar', src: p.picture, alt: '' }) : null, h('h3', {}, p.name)),
     p.headline ? h('p', {}, p.headline) : null,
     why(p),
     tags(p),
@@ -470,6 +574,27 @@ function row(item, relation) {
     h('div', { class: 'actions' }, actions(p, relation, item.id)),
   );
 }
+
+/** For someone who signed in with LinkedIn: what we keep from LinkedIn, and the button that deletes it. */
+async function renderLinkedinData() {
+  if (state.me?.signedInWith !== 'linkedin') return;
+  const { profile } = await api('GET', '/api/linkedin/me');
+  const when = (ms) => new Date(ms).toLocaleString();
+  $('linkedin-data').hidden = false;
+  $('linkedin-record').replaceChildren(profile
+    ? h('article', { class: 'row' },
+      h('p', {}, `From LinkedIn we keep LinkedIn’s id for you, your name (${profile.name ?? 'none given'}), ${profile.email ? `your email address (${profile.email})` : 'no email address'}, the link to your LinkedIn photo, your language setting and LinkedIn’s answer as we received it. First recorded ${when(profile.firstSeenMs)}, last read ${when(profile.lastRefreshedMs)}. Other people see your name and photo only.`),
+      h('div', { class: 'actions' }, h('button', {
+        class: 'ghost', type: 'button',
+        onclick: async () => {
+          if (!confirm('Delete what we keep from LinkedIn about you? Your profile in this app stays, and people will see your initials unless you picked a photo.')) return;
+          await api('POST', '/api/linkedin/forget').catch((ex) => alert(ex.message));
+          renderLinkedinData();
+        },
+      }, 'Delete my LinkedIn data')))
+    : h('p', { class: 'empty' }, 'Your LinkedIn email, photo link and language are deleted. We keep only the LinkedIn id that lets you sign in again. They are recorded again if you sign in with LinkedIn again.'));
+}
+$('tab-people').addEventListener('click', () => renderLinkedinData().catch(() => {}));
 
 let peopleKey = '';
 function renderPeople() {
@@ -497,7 +622,9 @@ function renderEngine() {
 }
 
 $('seed').addEventListener('click', async () => {
-  const p = state.position ?? BUSH_HOUSE;
+  // Demo people are placed around you, so there has to be a position: your real one, or the demo one you chose.
+  const p = state.position;
+  if (!p) return alert(!state.running ? 'Start the compass first.' : state.locationProblem ? 'Your position is not known. See the message under the compass, or choose the demo position there.' : 'Still finding your position. Answer the browser’s location question if it is asking; otherwise a message with a demo-position button appears under the compass within 15 seconds.');
   try { await api('POST', '/api/demo/seed', { lat: p.lat, lon: p.lon }); sync(); } catch (ex) { alert(ex.message); }
 });
 $('manual').addEventListener('click', () => {
@@ -515,9 +642,10 @@ $('hide').addEventListener('click', async () => {
 
 function signOut() {
   if (state.token) fetch('/api/hide', { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${state.token}` } }).catch(() => {});
-  const viaEmail = Boolean(state.logto && state.me?.email);
+  const viaEmail = Boolean(state.logto && state.me?.signedInWith === 'email');
   localStorage.removeItem('cc.token');
   // Signed in with email: end the Logto session too, or the next tap on "Sign in" would silently reuse it.
+  // (LinkedIn offers no such address: on a shared device, sign out at linkedin.com as well.)
   if (viaEmail) location.assign(state.logto.signOutUrl());
   else location.reload();
 }
@@ -530,12 +658,19 @@ window.addEventListener('pagehide', () => {
 
 // ---------- boot ----------
 
-/** After signing in with email for the first time there is no profile yet: ask for it. */
+/** After signing in with LinkedIn or email for the first time there is no profile yet: ask for it. */
 function enter() {
   if (!state.me.needsProfile) return show('compass');
-  $('signup-lede').textContent = 'You are signed in. Tell people who you are, so the compass has something to show them.';
+  const viaLinkedin = state.me.signedInWith === 'linkedin';
+  $('signup-lede').textContent = viaLinkedin
+    ? 'You are signed in with LinkedIn. LinkedIn does not tell apps your profile address, so please add it here, and say what you offer and what you are looking for.'
+    : 'You are signed in. Tell people who you are, so the compass has something to show them.';
   $('signup-submit').textContent = 'Save my profile';
   $('signup').elements.name.value = state.me.name ?? '';
+  // The picture people will see: the LinkedIn photo, or initials until a photo is picked.
+  $('photo-preview').src = state.me.picture;
+  $('photo-preview').hidden = false;
+  if (viaLinkedin) $('photo-hint').textContent = '(this is your LinkedIn photo; pick another to replace it)';
   show('signup');
 }
 
@@ -547,8 +682,13 @@ $('signin').addEventListener('click', async () => {
     $('signin').disabled = false;
   }
 });
-// Back from the sign-in page brings this page back exactly as it was left: button still disabled.
-window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = false; });
+$('signin-linkedin').addEventListener('click', () => {
+  $('signin-linkedin').disabled = true;
+  linkedin.signIn();
+  setTimeout(() => { $('signin-linkedin').disabled = false; }, 8000); // the page was never left
+});
+// Back from the sign-in page brings this page back exactly as it was left: buttons still disabled.
+window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = $('signin-linkedin').disabled = false; });
 $('quick').addEventListener('click', () => show('signup'));
 
 (async function boot() {
@@ -558,20 +698,39 @@ $('quick').addEventListener('click', () => show('signup'));
   state.logto = health.auth ? createLogto(health.auth) : null;
   $('seed').hidden = !state.demo;
   $('quick').hidden = !health.quickSignup;
+  $('signin').hidden = $('signin-fine').hidden = !state.logto;
+  $('signin-linkedin').hidden = $('signin-linkedin-fine').hidden = !health.linkedin;
+  if (health.linkedin && state.logto) $('signin').className = 'ghost'; // one main button: LinkedIn
+  if (health.linkedin?.standIn) $('signin-linkedin').textContent = 'Sign in with LinkedIn (local stand-in)';
   renderEngine();
 
+  const signedIn = (out) => {
+    state.token = out.token;
+    state.me = out.me;
+    localStorage.setItem('cc.token', out.token);
+    enter();
+  };
+  const refused = (ex) => {
+    $('welcome-error').textContent = ex.message;
+    $('welcome-error').hidden = false;
+    show('welcome');
+  };
+  // Coming back from LinkedIn: our server did the exchange and left a one-time handoff code for this page.
+  const fromLinkedin = linkedin.takeReturn();
+  if (fromLinkedin) {
+    try {
+      if (fromLinkedin.error) throw new Error(fromLinkedin.error);
+      return signedIn(await api('POST', '/api/linkedin/session', { code: fromLinkedin.code }));
+    } catch (ex) {
+      return refused(ex);
+    }
+  }
   // Coming back from Logto: swap the one-time code for a session with our server.
   if (state.logto?.returning) {
     try {
-      const out = await api('POST', '/api/session', { idToken: await state.logto.finishSignIn() });
-      state.token = out.token;
-      state.me = out.me;
-      localStorage.setItem('cc.token', out.token);
-      return enter();
+      return signedIn(await api('POST', '/api/session', { idToken: await state.logto.finishSignIn() }));
     } catch (ex) {
-      $('welcome-error').textContent = ex.message;
-      $('welcome-error').hidden = false;
-      return show('welcome');
+      return refused(ex);
     }
   }
   if (state.token) {
@@ -583,5 +742,5 @@ $('quick').addEventListener('click', () => show('signup'));
       state.token = null;
     }
   }
-  show(state.logto ? 'welcome' : 'signup');
+  show(state.logto || health.linkedin ? 'welcome' : 'signup');
 })();

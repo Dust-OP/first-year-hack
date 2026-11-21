@@ -8,8 +8,10 @@
   "scripts": {
     "dev": "node --watch server.mjs",
     "start": "node server.mjs",
+    "phones": "node dev/phones.mjs",
     "test": "node --test \"test/*.test.mjs\"",
     "mock-signin": "node dev/mock-oidc.mjs",
+    "mock-linkedin": "node dev/mock-linkedin.mjs",
     "snowflake:check": "node snowflake/check.mjs"
   }
 }
