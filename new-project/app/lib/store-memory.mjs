@@ -6,9 +6,11 @@ import { distanceM, bearingDeg } from './geo.mjs';
 export function createMemoryStore() {
   const users = new Map(); // id -> user
   const byToken = new Map(); // tokenHash -> id
-  const bySub = new Map(); // Logto user id -> id
+  const bySub = new Map(); // sign-in identity (Logto user id, or "linkedin|<sub>") -> id
   const locations = new Map(); // userId -> { lat, lon, accuracy, updatedMs }
   const requests = new Map(); // id -> request
+  const linkedinProfiles = new Map(); // userId -> what LinkedIn told us about that user
+  const photos = new Map(); // userId -> the photo they picked (JPEG data URL)
 
   return {
     kind: 'memory',
@@ -74,6 +76,41 @@ export function createMemoryStore() {
     },
     async requestsFor(userId) {
       return [...requests.values()].filter((r) => r.fromId === userId || r.toId === userId);
+    },
+
+    // What LinkedIn returned at sign-in, one record per user, kept apart from the app's own
+    // profile so it can be read by a later job and deleted on its own.
+    /** Insert or refresh. `fields` is linkedinRecord() plus `profileUrl`; the first-seen time survives a refresh. */
+    async saveLinkedinProfile(userId, fields, atMs) {
+      const old = linkedinProfiles.get(userId);
+      const rec = { userId, ...fields, profileUrl: fields.profileUrl ?? null, firstSeenMs: old?.firstSeenMs ?? atMs, lastRefreshedMs: atMs };
+      linkedinProfiles.set(userId, rec);
+      return rec;
+    },
+    async getLinkedinProfile(userId) {
+      return linkedinProfiles.get(userId) ?? null;
+    },
+    /** The linkedin.com/in/ address the user typed: LinkedIn itself does not tell us. */
+    async setLinkedinProfileUrl(userId, profileUrl) {
+      const rec = linkedinProfiles.get(userId);
+      if (rec) rec.profileUrl = profileUrl;
+    },
+    async deleteLinkedinProfile(userId) {
+      linkedinProfiles.delete(userId);
+    },
+    /** Every record, oldest first: the reading side for a later processing job. */
+    async listLinkedinProfiles() {
+      return [...linkedinProfiles.values()].sort((a, b) => a.firstSeenMs - b.firstSeenMs);
+    },
+
+    async setPhoto(userId, dataUrl) {
+      if (dataUrl) photos.set(userId, dataUrl);
+      else photos.delete(userId);
+    },
+    /** What the avatar route needs for one person, or null if there is no such user. */
+    async getAvatar(userId) {
+      const u = users.get(userId);
+      return u ? { name: u.name, photo: photos.get(userId) ?? null, picture: linkedinProfiles.get(userId)?.picture ?? null } : null;
     },
   };
 }
