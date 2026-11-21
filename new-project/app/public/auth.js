@@ -55,3 +55,21 @@ export function createLogto({ endpoint, appId }) {
     },
   };
 }
+
+/**
+ * Sign in with LinkedIn. LinkedIn's code exchange needs a client secret, so our server does it
+ * (lib/linkedin.mjs) and the page has only two small jobs: start the trip, and on the way back
+ * pick up the one-time handoff code the server left in the URL fragment.
+ */
+export const linkedin = {
+  signIn() {
+    location.assign('/api/linkedin/start');
+  },
+  /** `{ code }` or `{ error }` when the server has just sent the browser back from LinkedIn, else null. */
+  takeReturn() {
+    const q = new URLSearchParams(location.hash.slice(1));
+    if (!q.has('linkedin') && !q.has('linkedin_error')) return null;
+    history.replaceState(null, '', location.pathname + location.search); // single use: take it out of the address bar
+    return q.has('linkedin') ? { code: q.get('linkedin') } : { error: q.get('linkedin_error') };
+  },
+};
