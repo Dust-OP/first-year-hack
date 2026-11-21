@@ -81,4 +81,4 @@ first-year-hack/                  repository root
 - **Reddit opinion on compass UI designs** has not been read; automated access was blocked. A teammate should check it in a normal browser and add it to `findings/compass-frontend-design/`.
 - **Event rules on track and prize stacking** are unconfirmed. Ask the organisers; the question text is in `findings/retro-compass-prior-art/rules-snowflake.md`.
 - **The app has not been run on a phone yet.** First check: open `app/` over HTTPS on one iPhone and one Android phone, outdoors, and record what the heading does.
-- **The Snowflake path has not been run.** Needs an account; then `npm run snowflake:check` in `app/`.
+- **Snowflake works on the team's account** (checked 21 Nov): `npm run snowflake:check` passes and the full flow ran on the Snowflake store. The account settings live in the untracked `app/.env`.
