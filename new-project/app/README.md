@@ -9,7 +9,7 @@ Built 21 Nov 2026. No dependencies: Node 20+ only.
 1. **Sign in with LinkedIn** (your name and photo come from LinkedIn) or **with email** (a one-time code sent by Logto), then fill in your profile: name, what you do, your LinkedIn profile address, an optional photo, what you offer and what you are looking for. With neither sign-in configured, a quick sign-up with no check takes their place.
 2. **Start compass.** The phone asks for location and motion access. Without a position you are not on anyone's compass, and the page says why and what to do.
 3. The dial shows everyone within 500 m who has the app open. The **red needle** points at your best match (tap anyone else to follow them instead).
-4. **Turn until the needle points up.** When you face someone (within 15°), their card pops up: who they are, why they match, their LinkedIn link.
+4. **Turn until the needle points up.** The dial moves like a real compass: it follows you with a little inertia, overshoots slightly and settles. Hold your aim on someone (within 15°) for a moment and the compass has found them: a ring closes round the rim, the markings fade into **their profile picture** in the same glass disc, and their card pops up with who they are, why they match and their LinkedIn link. Turn 28° or more away, tap the picture or close the card, and the compass fades back. Tapping someone's dot shows them at once.
 5. **Send invitation.** They get it under *People*, read your profile, and **accept or decline**.
 6. Once accepted, both sides get **Connect on LinkedIn**, which opens the other person's real LinkedIn profile.
 
@@ -24,7 +24,16 @@ npm test           # 20 tests: bearings, invite/accept/decline, demo bots, email
                    #           Snowflake store without the new tables, QR code
 ```
 
-On a laptop there is no compass sensor, so the app switches to **drag the dial to turn** (or the left/right arrow keys). Open *Demo tools* and tap **Add demo people** to place five bots around you; one of them invites you, and any bot you invite accepts after a few seconds. That shows the whole flow on one device.
+A laptop has no compass sensor that a browser can read, and the app says so instead of pretending. You turn by hand, and the dial still behaves like a physical thing:
+
+- **Drag** it and it stays under the pointer. **Flick** it and it keeps spinning until friction stops it.
+- **Scroll** over it with the wheel or two fingers.
+- **Left/right arrow keys**: a tap turns 5°, holding the key spins the dial up and letting go lets it coast.
+- In Safari, two fingers turning on the trackpad rotate it too (written; Safari was not run).
+
+A device that does have a sensor (tablets, some 2-in-1s) uses it without being asked. *Turn by hand* under *Demo tools* switches between the two on any device.
+
+Open *Demo tools* and tap **Add demo people** to place five bots around you; one of them invites you, and any bot you invite accepts after a few seconds. That shows the whole flow on one device. *Demo tools* also shows the heading input live: which event arrived, its alpha, beta and gamma, and the heading made from them.
 
 ### On real phones
 
@@ -47,6 +56,35 @@ It starts the server and a Cloudflare quick tunnel (no account), waits until the
 
 If a phone is opened over plain http anyway, it is **not** placed anywhere: the page says it needs the https address. The old behaviour put every such phone on one fixed spot (Bush House), so two real people saw each other at 0 m.
 
+#### What to check on a phone
+
+Nothing below has been seen on a real phone. Open *Demo tools* first: its readout shows what the sensor sends. Stand outdoors, away from cars and railings, and use a second phone's compass app or a known street direction as the reference.
+
+On both phones:
+
+1. **Start.** Tap *Start compass* and allow motion and location. The readout's first line should say `the compass sensor` within a second or two, not `by hand`.
+2. **Flat.** Hold the phone flat and face north, east, south and west in turn. Write down the heading on each. It should agree with the reference to within about 10°.
+3. **Tilted.** Face one fixed landmark and raise the phone slowly from flat to upright, as if to take a photo. The heading should stay within about 10° all the way. Note any jump and the `beta` at which it happens (the hand-over between "top edge" and "back of the phone" is at beta 65° to 80°). On Android, above about 65° of lift a rolled wrist shifts the heading (a 20° roll moves it about 14° at 70° of lift and 20° at 75°), so keep the phone level from side to side while you raise it.
+4. **Upright with a twist.** Hold it upright and turn only your wrist left and right by about 30°. The heading should follow where the back of the phone faces.
+5. **Landscape.** Unlock rotation, turn the phone on its side (both ways), face the same landmark flat and upright. The heading should match step 2, and `screen` in the readout should read 90 or 270.
+6. **Feel.** Turn a quarter turn briskly and stop. The dial should arrive, pass the mark by a few degrees once and settle in about half a second. At rest it should be steady or tremble by less than a degree. If it lags or swings too much, change `rose` in `public/tuning.js`.
+7. **Find someone.** With demo people added, or a teammate 50 m away: turn to them, hold still. The ring should close in under half a second and the picture (or initials) fade in, once, with no flicker. Sweep past them quickly: nothing should appear. Turn away: it should go only after about 28°.
+8. **Back from the background.** Switch to another app for ten seconds and return. The dial should carry on from where it was without spinning.
+9. **By hand.** *Demo tools* > *Turn by hand*: drag with one finger, flick, and check the page does not scroll while the finger is on the dial. *Use the sensor* brings the sensor back.
+
+iPhone only (Safari):
+
+10. The **permission prompt** appears on the tap on *Start compass*. Answer *Don't Allow* once (the status should say you turn by hand, and dragging should work), then reload and allow.
+11. The readout shows `webkitCompassHeading` and `accuracy`. Note the usual accuracy outdoors and indoors. Above ±30° for a second the orange **figure-of-eight hint** should appear; do the figure of eight and it should go.
+12. In step 3, watch whether iOS's own heading jumps or flips when the phone passes upright. The app uses that value as iOS gives it; if it flips, tell the team and hold the phone below upright for the demo.
+13. Two fingers turning on the dial in *Turn by hand* mode should rotate it and must not zoom the page.
+
+Android only (Chrome):
+
+14. The readout should name the event `deviceorientationabsolute`. Lay the phone still on a table: Chrome stops sending events when nothing moves, which is normal; the dial must simply stay put.
+15. Android browsers report no accuracy, so the figure-of-eight hint never appears by itself there. If the heading is off against the reference, do the figure of eight anyway and compare again.
+16. On the lock-on in step 7 the phone should give one short vibration.
+
 ## What is real and what is not
 
 | Part | State on 21 Nov |
@@ -59,7 +97,9 @@ If a phone is opened over plain http anyway, it is **not** placed anywhere: the 
 | Pictures (`picture` on every person) | Works: picked photo, LinkedIn picture through the stand-in, or generated initials. A real LinkedIn picture has not been loaded |
 | `npm run phones` (https tunnel and QR code) | Run on this Mac on 21 Nov; the QR symbols were decoded back by macOS's QR reader. **Not yet scanned with a phone** |
 | Email sign-in through Logto | Written and checked in a browser against a **local stand-in** for Logto (`npm run mock-signin`). **Not yet run against the real Logto**: that needs the App ID |
-| Compass heading from the phone sensor | Written, **not yet run on a phone**. The headless test browser has no sensor, so only the drag-to-turn path was exercised |
+| Compass heading from the phone sensor | Written and run in a browser, **not yet run on a phone**. On 21 Nov in headless Chromium 156: Chrome's own virtual orientation sensor (real `deviceorientationabsolute` events, only the hardware pretend) gave the expected heading, to the two decimal places the readout prints, for 24 attitudes: flat, tilted, upright and in both landscapes, including five where the old `360 - alpha` was 20° to 180° out (upright with the wrist twisted; a landscape camera hold leaning past vertical). Those 24 were run with the blend at 50° to 75° of lift; after it moved to 65° to 80° the same virtual sensor was run again for 52 attitudes, portrait and both landscapes: outside the blend the heading was the expected one to within 0.1° (Chrome rounds the angles it sends to 0.1°), a 20° roll of the wrist moved it by 0.00° up to 65° of lift, and the flip came between 21.0° and 21.1° past vertical. Events built in the page covered the iPhone shape (`webkitCompassHeading`, accuracy, the permission answer), missing readings and the fallbacks. What only a phone can show is listed under *What to check on a phone* |
+| Dial physics, lock-on and the picture reveal | Works in Chromium at phone and laptop size, light and dark, and with reduced motion. Measured in the page at 60 frames a second: the dial overshoots a quarter turn by 9.5% and is inside 2% after 0.47 s; a 3 s stall moves it one frame's worth, not three seconds' worth. Safari and Firefox were not run |
+| Profile pictures | The dial shows `picture` when a person carries one (a URL, or `null`). **The server on this branch does not send it yet**, so today everyone appears as large initials. Checked with pictures added to the server's answers on their way to the page: a good one, `null`, slow, missing (404) and not-an-image |
 | Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
 
@@ -134,6 +174,15 @@ This has not been done. A test browser stands in for the phones' GPS, not for th
 9. On one phone refuse location (or switch it off in settings and reload). Does the notice under the compass explain it, and does **Try again** work after allowing it?
 10. Close the tab on one phone. The other should lose that person within about 3 s; if the browser was swiped away instead, within about 45 s.
 
+### Heading limits
+
+- **What "heading" means here.** Where you point the phone: the top edge while it lies flat or is tilted like a remote control, the back of the phone while it is held upright like a camera, and a blend between 65° and 80° of lift. Up to 65° a sideways roll of the wrist does not move the heading; above that it starts to, because the back of the phone turns with the wrist. With the screen turned, the edge that is up on the screen counts.
+- **One blind spot.** Lean an upright phone back about 21° past vertical and the answer flips by 180°. Some flip is unavoidable; it was put where nobody holds a phone.
+- **iPhone.** The app takes iOS's own `webkitCompassHeading` and does no tilt maths of its own there. How that value behaves when the phone is upright has not been seen. A reading whose accuracy is negative is ignored (iOS's way of saying it has none yet).
+- **Android.** No accuracy is reported, so poor calibration cannot be detected. Chrome sends nothing while the phone is still, so a silent sensor is not treated as a broken one.
+- **Magnetic north.** The phone gives magnetic north and the bearings to people are true. In London the gap is about 1° (from prior knowledge, not re-checked), far below everything else here.
+- **No compass.** A laptop, a refused permission or an in-app browser means turning by hand. The app never invents a heading.
+
 ### Privacy choices already in the code
 
 - **Consent on first open.** A dialog (`public/consent.js`) blocks the page until the visitor agrees or declines; declining keeps the app closed, and withdrawing later removes the position. The privacy notice (`public/privacy.html`) is linked from the dialog, the sign-up form and *Demo tools*, and describes what this code stores, including LinkedIn sign-in, pictures and the state of the two extra Snowflake tables. It has had no legal review. When the notice changes in substance, bump `REVISION` in `consent.js` so that everyone is asked again (now 2).
@@ -188,8 +237,12 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 | `lib/store-memory.mjs` | Default store |
 | `lib/snowflake.mjs`, `lib/store-snowflake.mjs` | Snowflake SQL API client (no driver) and store |
 | `snowflake/setup.sql`, `snowflake/check.mjs` | Account setup and the one-command check |
-| `public/compass.js` | **The dial.** Restyle or replace this file; keep `createCompass`, `setPeople` and `render` and nothing else needs to change |
-| `public/heading.js` | Phone heading: iOS permission, Android absolute orientation, manual fallback |
+| `public/compass.js` | **The dial.** Restyle or replace this file; keep `createCompass`, `setPeople` and `render` and nothing else needs to change. The needle and the lock ring are drawn here |
+| `public/heading.js` | Which way the user faces: the permission prompt, the tilt-compensated heading from the sensor, iOS accuracy, and turning by hand with momentum |
+| `public/physics.js` | The spring that makes the dial and the needle move like a needle in fluid. No DOM: it runs in Node too |
+| `public/lockon.js` | When the compass has "found" someone: capture angle, dwell, wider release angle, tap and dismiss. No DOM |
+| `public/reveal.js` | The picture that replaces the dial: preloading, initials when there is no picture, the way back |
+| `public/tuning.js` | **Every number that decides the feel**, each with a line saying what it does. Change one and reload |
 | `public/app.js`, `index.html` | Screens, location, polling, the card and the inbox |
 | `public/consent.js`, `consent.css`, `privacy.html`, `public/vendor/cookieconsent/` | The first-open consent dialog (CookieConsent 3.3.0, MIT, vendored) and the privacy notice |
 | `public/style.css` | The look: Apple-style liquid glass, Apple system colours (light and dark), fade transitions for every view, sheet and button state |
@@ -200,7 +253,7 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 
 1. Create the Logto application, set `LOGTO_APP_ID` and sign in once with a real email to confirm the code arrives.
 1. Create the LinkedIn developer app, set `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET`, sign in once with a real account, and do the checks listed at the end of `../findings/linkedin-integration/RESULT.md`.
-1. Run the [two-phone check](#two-phone-check): `npm run phones`, one iPhone and one Android phone, outdoors. Record what the heading does.
+1. Run the [two-phone check](#two-phone-check): `npm run phones`, one iPhone and one Android phone, outdoors, following *What to check on a phone*. Record what the heading does.
 1. Decide when to run the Snowflake migration for the two new tables, then `npm run snowflake:check`.
 3. Drop in the designed dial from the front-end session.
 4. Pick the real name.
