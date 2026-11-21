@@ -383,6 +383,7 @@ button.primary:active:not(:disabled), .btn:active, button.ghost:active:not(:disa
   transition-duration: .12s;
 }
 button:disabled { cursor: default; }
+button.ghost:disabled { opacity: .45; }
 /* Disabled: a deeper, muted fill, not a faded button. Fading (opacity, or a paler blue) takes the
    white label below 4.5:1; it has to stay readable at the low point of `breathe` below as well. */
 button.primary:disabled { background-color: var(--blue-muted); background-image: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }

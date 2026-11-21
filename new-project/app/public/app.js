@@ -706,7 +706,11 @@ $('signin-linkedin').addEventListener('click', () => {
   setTimeout(() => { $('signin-linkedin').disabled = false; }, 8000); // the page was never left
 });
 // Back from the sign-in page brings this page back exactly as it was left: buttons still disabled.
-window.addEventListener('pageshow', (e) => { if (e.persisted) $('signin').disabled = $('signin-linkedin').disabled = false; });
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted || !state.signinOn) return;
+  $('signin').disabled = !state.signinOn.email;
+  $('signin-linkedin').disabled = !state.signinOn.linkedin;
+});
 $('quick').addEventListener('click', () => show('signup'));
 
 (async function boot() {
@@ -716,9 +720,19 @@ $('quick').addEventListener('click', () => show('signup'));
   state.logto = health.auth ? createLogto(health.auth) : null;
   $('seed').hidden = !state.demo;
   $('quick').hidden = !health.quickSignup;
-  $('signin').hidden = $('signin-fine').hidden = !state.logto;
-  $('signin-linkedin').hidden = $('signin-linkedin-fine').hidden = !health.linkedin;
-  if (health.linkedin && state.logto) $('signin').className = 'ghost'; // one main button: LinkedIn
+  // Both ways to sign in are always offered. One this server has not set up stays visible but greyed out,
+  // so the choice never silently disappears (it did when .env had neither LOGTO_APP_ID nor LINKEDIN_*).
+  state.signinOn = { email: Boolean(state.logto), linkedin: Boolean(health.linkedin) };
+  const notSetUp = 'Not set up on this server yet.';
+  $('signin').disabled = !state.signinOn.email;
+  $('signin-linkedin').disabled = !state.signinOn.linkedin;
+  if (!state.signinOn.email) $('signin-fine').textContent = notSetUp;
+  if (!state.signinOn.linkedin) $('signin-linkedin-fine').textContent = notSetUp;
+  if (state.signinOn.linkedin || !state.signinOn.email) $('signin').className = 'ghost'; // one main button
+  if (!state.signinOn.email && !state.signinOn.linkedin && !health.quickSignup) {
+    $('welcome-error').textContent = 'No way to sign in is set up on this server yet.';
+    $('welcome-error').hidden = false;
+  }
   if (health.linkedin?.standIn) $('signin-linkedin').textContent = 'Sign in with LinkedIn (local stand-in)';
   renderEngine();
 
@@ -760,5 +774,5 @@ $('quick').addEventListener('click', () => show('signup'));
       state.token = null;
     }
   }
-  show(state.logto || health.linkedin ? 'welcome' : 'signup');
+  show('welcome');
 })();
