@@ -3,6 +3,10 @@
 The team's FirstYearHack 2026 project: **Track 2, Retro Remix**, built around reinventing the compass.
 Name, language and final scope are still to be decided.
 
+Start here:
+- [`EVENT-BRIEF.md`](EVENT-BRIEF.md): the tracks, what the team has decided (Track 2, the compass, a cinematic demo film) and which rules are unconfirmed.
+- [`RESOURCES.md`](RESOURCES.md): every resource linked to the project, including work in progress and what is kept out of the repo.
+
 ## Research (21 Nov 2026)
 
 All findings and evidence are in [`findings/`](findings/) (index: [`findings/README.md`](findings/README.md)). Agents and contributors: read [`AGENTS.md`](AGENTS.md) for the folder layout and rules.

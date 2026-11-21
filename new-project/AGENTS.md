@@ -28,6 +28,8 @@ first-year-hack/                  repository root
 └── new-project/                  ← this project
     ├── AGENTS.md                 this file: architecture, folder roles, working rules
     ├── README.md                 human-facing overview and key research points
+    ├── EVENT-BRIEF.md            event tracks as given, team decisions, unconfirmed rules
+    ├── RESOURCES.md              index of every linked resource: in repo, external, in progress, kept local
     └── findings/                 all research findings and evidence
         ├── README.md             index of findings, evidence labels, what is not stored
         ├── retro-compass-prior-art/   prior art, event rules, Snowflake, demo-video references
@@ -47,6 +49,8 @@ first-year-hack/                  repository root
 |---|---|---|
 | `new-project/AGENTS.md` | Project architecture, folder roles and rules for agents. Update it when folders are added or their roles change. | Whoever changes the structure |
 | `new-project/README.md` | Short human-facing overview with links into `findings/`. | Anyone |
+| `new-project/EVENT-BRIEF.md` | The event brief as received and the decisions taken. Update a decision's state when the team changes it. | Anyone, after a team decision |
+| `new-project/RESOURCES.md` | Index of all project resources, including work in progress and what is kept out of the repo and why. Add a row when you add or move a resource. | Anyone adding a resource |
 | `new-project/findings/` | **The only place for research results and evidence.** One subfolder per research question. | Research sessions |
 | `findings/<topic>/RESULT.md` or `SUMMARY.md` | The decision-ready summary: recommendation, limits, adoption state, next check. | The research owner for that topic |
 | `findings/<topic>/*.md` | Detailed worker reports: per-candidate data, quotes, status labels. | Research workers |
