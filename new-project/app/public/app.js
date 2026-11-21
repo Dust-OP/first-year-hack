@@ -2,6 +2,7 @@
 
 import { createLogto } from './auth.js';
 import { createCompass } from './compass.js';
+import { playConfirm } from './confirm.js';
 import { angleDiff, createHeading } from './heading.js';
 
 const SYNC_MS = 3000; // how often we report position and refresh who is around
@@ -246,12 +247,12 @@ const linkedinLink = (person, text = 'View LinkedIn profile') =>
 
 /** Buttons for one person, by where the two of you stand. */
 function actions(person, relation, requestId) {
-  const act = (fn) => async (e) => {
+  const act = (fn, done) => async (e) => {
     // Keep the button: e.currentTarget is gone after the await. On failure give it back, or the card
     // (rebuilt only when something visible changes) would leave it disabled for good.
     const button = e.currentTarget;
     button.disabled = true;
-    try { await fn(); } catch (ex) { alert(ex.message); button.disabled = false; }
+    try { await fn(); done?.(); } catch (ex) { alert(ex.message); button.disabled = false; }
     sync();
   };
   if (relation === 'connected') {
@@ -262,13 +263,13 @@ function actions(person, relation, requestId) {
   }
   if (relation === 'incoming') {
     return [
-      h('button', { class: 'primary', type: 'button', onclick: act(() => api('POST', '/api/requests/respond', { id: requestId, action: 'accept' })) }, 'Accept'),
+      h('button', { class: 'primary', type: 'button', onclick: act(() => api('POST', '/api/requests/respond', { id: requestId, action: 'accept' }), () => playConfirm('Connected')) }, 'Accept'),
       h('button', { class: 'ghost', type: 'button', onclick: act(() => api('POST', '/api/requests/respond', { id: requestId, action: 'decline' })) }, 'Decline'),
     ];
   }
   if (relation === 'outgoing') return [h('button', { class: 'primary', type: 'button', disabled: true }, 'Invitation sent, waiting')];
   if (relation === 'declined-by-them') return [h('p', { class: 'note' }, 'They declined your invitation.')];
-  return [h('button', { class: 'primary', type: 'button', onclick: act(() => api('POST', '/api/requests', { toId: person.id })) }, 'Send invitation')];
+  return [h('button', { class: 'primary', type: 'button', onclick: act(() => api('POST', '/api/requests', { toId: person.id }), () => playConfirm('Invitation sent')) }, 'Send invitation')];
 }
 
 function renderCard() {
