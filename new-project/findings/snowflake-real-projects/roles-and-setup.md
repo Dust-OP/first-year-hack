@@ -5,6 +5,8 @@
 - **Builds on:** [`../retro-compass-prior-art/rules-snowflake.md`](../retro-compass-prior-art/rules-snowflake.md) section 2, which covers account routes, Cortex function list, geospatial functions and Marketplace datasets. That material is not repeated here.
 - **Labels:** verified-in-spec (docs read), verified-in-source (code read), inferred, unverified (+ next check). See [`../README.md`](../README.md).
 
+> **Written before the live check (2026-11-21).** On the team's account the database is `OVERTURE_MAPS_PLACES` (one underscore), AI functions work with no card, and bearings need `MOD(DEGREES(ST_AZIMUTH(a, b)) + 360, 360)`. The script that was actually run is `app/snowflake/setup.sql` (unencrypted key, `-nocrypt`), not the draft below. Current facts: [`live-account-check.md`](live-account-check.md).
+
 ---
 
 ## 0. Short version for the team
@@ -295,7 +297,7 @@ Source: https://docs.snowflake.com/en/user-guide/network-policies
 
 ## 4. Official sample code: what the setup scripts actually do
 
-All repos are from `github.com/Snowflake-Labs`, shallow-cloned on 2026-11-21 into `/private/tmp/claude-501/-Users-dust-Projects-first-year-hack-new-project/4ebaf192-5440-4dc8-9335-94f7adcd7ba0/scratchpad/repos-c/`. None of the code was run. All repos below are Apache-2.0 per their `LICENSE` file unless marked otherwise.
+All repos are from `github.com/Snowflake-Labs`, shallow-cloned on 2026-11-21 into a local scratch directory outside this repo. None of the code was run. All repos below are Apache-2.0 per their `LICENSE` file unless marked otherwise.
 
 ### 4.1 Summary table
 

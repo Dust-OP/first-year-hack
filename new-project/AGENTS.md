@@ -44,11 +44,12 @@ first-year-hack/                  repository root
         │   ├── community-reception.md   17 candidates with community reception and tech feedback
         │   ├── showcase/                visual gallery: index.html + img/ screenshots of every candidate
         │   └── evidence/
-        └── snowflake-real-projects/   what Snowflake does in real projects, roles, draft setup.sql
+        └── snowflake-real-projects/   what Snowflake does in real projects, roles, live account check
             ├── RESULT.md
+            ├── TASK.md                     task brief
             ├── winners-a.md, winners-b-geo.md   source reads of 19 projects
             ├── live-account-check.md       live trial check: roles, AI, ST_AZIMUTH range, Overture query
-            └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (not run)
+            └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (draft not run; app/snowflake/setup.sql was)
 ```
 
 ## Folder roles

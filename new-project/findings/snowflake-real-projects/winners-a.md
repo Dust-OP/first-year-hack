@@ -192,4 +192,4 @@ Most reusable idea for a compass web app (8 hours, first-years): Hurricane Week'
 - Full clones (default branch; Hurricane Week has only `main`). Grepped `snowflake|cortex` repo-wide and roles/grants (`CREATE ROLE|GRANT|USE ROLE|ACCOUNTADMIN|SYSADMIN|SECURITYADMIN|CORTEX_USER|CROSS_REGION`). Read the Snowflake client modules, setup SQL, role scripts, the relevant README/SCHEMA/learnings sections and the Snowflake-related commit messages.
 - Not read: every application module in full (for example Vigil's 940-line `assess.py` beyond its anchors), frontends beyond the Snowflake-visible components, demo videos, and non-default branches of other repos.
 - Not done: running any code, logging into Snowflake, confirming deployed env values (for example whether `SNOWFLAKE_RAG=on` was set live for Hurricane Week).
-- Scratch clones: `/private/tmp/claude-501/-Users-dust-Projects-first-year-hack-new-project/4ebaf192-5440-4dc8-9335-94f7adcd7ba0/scratchpad/repos/` (untrusted, never executed).
+- Scratch clones: a local scratch directory outside this repo (untrusted, never executed).
