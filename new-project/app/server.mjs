@@ -6,7 +6,10 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createAppFromEnv } from './lib/setup.mjs';
+import { createApi } from './lib/api.mjs';
+import { createLinkedin, linkedinConfigFromEnv } from './lib/linkedin.mjs';
+import { createIdTokenVerifier, logtoConfigFromEnv } from './lib/logto.mjs';
+import { createStoreFromEnv } from './lib/setup.mjs';
 
 try { process.loadEnvFile(new URL('./.env', import.meta.url)); } catch { /* no .env: defaults apply */ }
 
@@ -16,7 +19,13 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 
-const { api, store, logto, linkedinCfg } = await createAppFromEnv();
+const store = await createStoreFromEnv(); // DATABASE_URL -> Postgres, else Snowflake, else memory
+const logto = logtoConfigFromEnv();
+const linkedinCfg = linkedinConfigFromEnv();
+const api = createApi({
+  store, demo: process.env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto),
+  linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: process.env.PUBLIC_URL || null,
+});
 
 async function serveStatic(pathname, res) {
   // /callback is where Logto sends the browser back after sign-in; the page itself finishes the job.
