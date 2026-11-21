@@ -38,7 +38,7 @@ export const TUNING = {
   lock: {
     releaseDeg: 28, // turn this far away from the person and the compass comes back
     dwellMs: 400, // the aim must hold steady this long before the picture appears
-    releaseMs: 180, // ...and stay beyond the release angle this long before it goes
+    releaseMs: 250, // ...and stay beyond the release angle this long before it goes (longer than the dial's own overshoot lasts)
     steadyRate: 45, // "steady" = the dial is turning slower than this
     switchMarginDeg: 3, // a second person must be this much closer to take the aim over
     edgeDeg: 2, // the aimed person keeps the aim this far past the capture angle

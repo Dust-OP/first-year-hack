@@ -228,8 +228,9 @@ $('start').addEventListener('click', async () => {
   wrap.addEventListener('pointerdown', (e) => {
     dragged = false;
     if (!state.running || pointer || rotation !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    if (!heading.grab(e.timeStamp)) return; // also catches a dial that is still spinning
-    pointer = { id: e.pointerId, angle: around(e).angle, x: e.clientX, y: e.clientY, engaged: false };
+    // held: the dial is in hand (grabbing also stops a dial that is still spinning). While the
+    // sensor is in charge the press is only watched, so that a swipe is still not taken for a tap.
+    pointer = { id: e.pointerId, angle: around(e).angle, x: e.clientX, y: e.clientY, engaged: false, held: heading.grab(e.timeStamp) };
   });
   window.addEventListener('pointermove', (e) => {
     if (!pointer || e.pointerId !== pointer.id) return;
@@ -238,17 +239,17 @@ $('start').addEventListener('click', async () => {
       // A tap wobbles by a few pixels: that must not turn the dial or count as a drag.
       if (Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y) < 5) return;
       pointer.engaged = dragged = true;
-      wrap.classList.add('is-grabbed');
+      if (pointer.held) wrap.classList.add('is-grabbed');
     }
     // Right at the pivot a hair's width is half a turn, so the dial only follows further out.
-    if (out > 0.12) heading.drag(-angleDiff(pointer.angle, angle), e.timeStamp); // rose clockwise = you turn anticlockwise
+    if (pointer.held && out > 0.12) heading.drag(-angleDiff(pointer.angle, angle), e.timeStamp); // rose clockwise = you turn anticlockwise
     pointer.angle = angle;
   });
   const letGo = (e) => {
     if (!pointer || e.pointerId !== pointer.id) return;
+    if (pointer.held) heading.release(e.timeStamp);
     pointer = null;
     wrap.classList.remove('is-grabbed');
-    heading.release(e.timeStamp);
     setTimeout(() => { dragged = false; }, 0); // after the click this release may produce
   };
   window.addEventListener('pointerup', letGo);

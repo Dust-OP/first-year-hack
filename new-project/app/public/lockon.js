@@ -28,7 +28,7 @@
 
 import { angleDiff } from './physics.js';
 
-export function createLockOn({ captureDeg = 15, releaseDeg = 28, dwellMs = 400, releaseMs = 180, steadyRate = 45, switchMarginDeg = 3, edgeDeg = 2 } = {}) {
+export function createLockOn({ captureDeg = 15, releaseDeg = 28, dwellMs = 400, releaseMs = 250, steadyRate = 45, switchMarginDeg = 3, edgeDeg = 2 } = {}) {
   let aimedId = null; // nearest person within the capture angle
   let dwell = 0; // how long the aim has been steady on them
   let spent = false; // this aim has already locked (or was overruled by a tap): it must leave and return
