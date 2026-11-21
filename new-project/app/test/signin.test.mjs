@@ -64,7 +64,7 @@ test('email sign-in: first visit needs a profile, then the compass works; signin
   assert.equal((await anon('POST', '/api/session', { idToken: 'junk' })).status, 401);
   assert.equal((await anon('POST', '/api/signup', { name: 'Eve', linkedin: 'eve' })).status, 403, 'no unverified sign-ups once email sign-in is on');
 
-  const first = (await anon('POST', '/api/session', { idToken: idp.idToken({ sub: 'u-ada', email: 'ada@example.com' }) })).body;
+  const first = (await anon('POST', '/api/session', { idToken: idp.idToken({ sub: 'u-ada', email: 'ada@example.com', email_verified: true }) })).body;
   assert.equal(first.me.needsProfile, true);
   assert.equal(first.me.name, 'ada', 'name starts from the email until the profile is filled in');
   assert.equal(first.me.email, 'ada@example.com');
@@ -79,14 +79,14 @@ test('email sign-in: first visit needs a profile, then the compass works; signin
   assert.equal((await ada('POST', '/api/sync', here)).body.located, true);
 
   // Someone standing next to her sees her profile but never her email.
-  const ben = call((await anon('POST', '/api/session', { idToken: idp.idToken({ sub: 'u-ben', email: 'ben@example.com' }) })).body.token);
+  const ben = call((await anon('POST', '/api/session', { idToken: idp.idToken({ sub: 'u-ben', email: 'ben@example.com', email_verified: true }) })).body.token);
   await ben('POST', '/api/profile', { name: 'Ben', linkedin: 'ben' });
   const seen = (await ben('POST', '/api/sync', { ...here, lat: here.lat + 0.001 })).body.nearby;
   assert.equal(seen[0].name, 'Ada Lovelace');
   assert.equal(seen[0].email, undefined);
 
   // Signing in again: same account, profile kept, and the old session stops working.
-  const again = (await anon('POST', '/api/session', { idToken: idp.idToken({ sub: 'u-ada', email: 'ada@example.com' }) })).body;
+  const again = (await anon('POST', '/api/session', { idToken: idp.idToken({ sub: 'u-ada', email: 'ada@example.com', email_verified: true }) })).body;
   assert.equal(again.me.id, first.me.id);
   assert.equal(again.me.needsProfile, false);
   assert.equal((await ada('GET', '/api/me')).status, 401);

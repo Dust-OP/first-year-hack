@@ -92,14 +92,34 @@ export function createPostgresStore(query, { schema = 'public' } = {}) {
   return {
     kind: 'postgres',
 
+    /**
+     * A sign-in identity has one account: logto_sub is UNIQUE, and when two sign-ins for the same
+     * identity race (a double tap, two tabs), the second gets the first one's account back
+     * instead of an error.
+     */
     async createUser(u) {
-      await q(
+      const rows = await q(
         `INSERT INTO ${T.users} (id, logto_sub, email, token_hash, name, headline, linkedin_url, offers, seeks, is_demo, created_ms)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11)
+         ON CONFLICT (logto_sub) DO NOTHING RETURNING id`,
         [u.id, u.sub ?? null, u.email ?? null, u.tokenHash ?? null, u.name, u.headline ?? '', u.linkedin ?? null,
           JSON.stringify(u.offers ?? []), JSON.stringify(u.seeks ?? []), Boolean(u.demo), Date.now()],
       );
-      return u;
+      return rows.length ? u : this.getUserBySub(u.sub);
+    },
+    /** See store-memory.mjs. Email is compared without case; a LinkedIn address counts only when LinkedIn says it is verified. */
+    async findUserByEmail(email) {
+      const rows = await q(
+        `SELECT ${USER_COLS} FROM ${T.users} u
+         WHERE NOT u.is_demo AND (lower(u.email) = $1 OR EXISTS (
+           SELECT 1 FROM ${T.linkedin} l WHERE l.user_id = u.id AND l.email_verified AND lower(l.email) = $1))
+         ORDER BY u.created_ms LIMIT 1`,
+        [email],
+      );
+      return rows[0] ? toUser(rows[0]) : null;
+    },
+    async setUserEmail(id, email) {
+      await q(`UPDATE ${T.users} SET email = $1 WHERE id = $2`, [email, id]);
     },
     async getUserBySub(sub) {
       const rows = await q(`SELECT ${USER_COLS} FROM ${T.users} u WHERE u.logto_sub = $1`, [sub]);
