@@ -20,6 +20,7 @@ If something is not in this list, it has not been collected yet. Add it here whe
 | Front-end candidates: 17 with community reception | [`findings/compass-frontend-design/community-reception.md`](findings/compass-frontend-design/community-reception.md) |
 | Visual showcase of all 47 front-end candidates and leads: screenshots, tech, licence, what to borrow, filters | [`findings/compass-frontend-design/showcase/index.html`](findings/compass-frontend-design/showcase/index.html). Published copy: https://claude.ai/artifact/Ho9vk78aBfuxteoMkCob7N (private to its owner until shared from the page's Share menu) |
 | Prior-art gallery: 59 compass projects with a picture, one-line description, link and filters (hackathon, maker, product, wearable, art, YouTube, big company) | [`findings/retro-compass-prior-art/gallery/index.html`](findings/retro-compass-prior-art/gallery/index.html). Published copy: https://claude.ai/artifact/ByEgAjRs8reZgRtRqVRKQK (private to its owner until shared). Build inputs in `gallery/tools/` |
+| Demo-video material: the Safari icon from 2003 to 2026 and the compass through history, as swap clips and one continuous video each, with credits | [`video-info/README.md`](video-info/README.md). The compass media is committed. The Safari icons and videos are Apple artwork and are kept local; rebuild them with the commands in the README |
 | Source notes (`E-*.json`) behind the findings | `findings/*/evidence/` |
 | Research method and helper (`loop.mjs`) | [`../reference-loop/`](../reference-loop/) |
 | Tools the team used or checked | [`../TOOL-INVENTORY.md`](../TOOL-INVENTORY.md) |
@@ -42,7 +43,7 @@ Other sessions are still working on these. Their owners will add the results; do
 | Work | Expected location | State at 11:50 |
 |---|---|---|
 | Snowflake in real hackathon projects: what Snowflake does in each, SQL and features used, roles and privileges, trial-account failures; a setup script outline | `findings/snowflake-real-projects/` | Task brief only (uncommitted) |
-| Demo showcase and video brainstorming | Not started | Next, after the resources are collected |
+| Demo showcase and video brainstorming | Not decided | Clip material is ready in `video-info/` (21 Nov); the storyboard has not started |
 
 ## Kept outside the repo on purpose
 
@@ -55,6 +56,7 @@ The researcher keeps these on their own machine. They are not committed, for the
 | Raw cached web pages (Devpost, Luma, hackathon galleries) and one fetched PDF | Third-party copies. The live URLs are cited in the reports |
 | Third-party source files read during research (Cosmodial `gyro.js`, SteelSeries `steelseries.js`, a three.js orientation-controls fork) | Read for evaluation only. Copy code into the app only when it is adopted, with its license and commit noted (see `AGENTS.md` rule 5) |
 | One-off scraping and caption scripts (about 100 lines in total) | Throwaway helpers. They have no reuse value. The two gallery build scripts are kept, in `gallery/tools/` and `showcase/tools/` |
+| Safari icon images and the Safari clips and videos built from them (`video-info/safari/`, ignored by git) | Apple artwork; the repo is public. Sources, order and a one-command rebuild are in `video-info/README.md` |
 | Working copies of the two research tasks | The repo copies in `findings/` are the ones to read |
 
 ## Known gaps
