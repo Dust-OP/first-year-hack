@@ -8,7 +8,7 @@ This file describes this project only. It does not replace any agent's own globa
 - **Event:** KCL First Year Hackathon 2026, **Track 2: Retro Remix**. The theme is reinventing the compass.
 - **Team:** see the repository root [`README.md`](../README.md).
 - **Concept (decided 21 Nov):** a compass that points at nearby people worth working with. Point at someone to see their profile, send an in-app invitation, and after they accept both sides open the other's LinkedIn profile.
-- **Stage:** demo v1 built in [`app/`](app/) (working title "Career Compass"). The final name is not chosen. Not yet run on a real phone or against Snowflake; see [`app/README.md`](app/README.md).
+- **Stage:** demo v1 built in [`app/`](app/) (working title "Career Compass"). The final name is not chosen. Not yet run on a real phone. The Snowflake store was run on the team's account on 21 Nov; see [`app/README.md`](app/README.md).
 - **Technical direction from research, adopted in demo v1:**
   - A phone web app.
   - An SVG compass dial rotated with CSS transforms.
@@ -45,11 +45,12 @@ first-year-hack/                  repository root
         │   ├── community-reception.md   17 candidates with community reception and tech feedback
         │   ├── showcase/                visual gallery: index.html + img/ screenshots of every candidate
         │   └── evidence/
-        └── snowflake-real-projects/   what Snowflake does in real projects, roles, draft setup.sql
+        └── snowflake-real-projects/   what Snowflake does in real projects, roles, live account check
             ├── RESULT.md
+            ├── TASK.md                     task brief
             ├── winners-a.md, winners-b-geo.md   source reads of 19 projects
             ├── live-account-check.md       live trial check: roles, AI, ST_AZIMUTH range, Overture query
-            └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (not run)
+            └── roles-and-setup.md          roles explained, auth, official samples, draft setup.sql (draft not run; app/snowflake/setup.sql was)
 ```
 
 ## Folder roles
@@ -66,7 +67,7 @@ first-year-hack/                  repository root
 | `findings/<topic>/evidence/` | Source notes (`E-*.json`) from `reference-loop/loop.mjs note`. | Research sessions |
 | `new-project/app/` | The product: a zero-dependency Node server (`server.mjs`, `lib/`), the phone UI (`public/`), tests (`test/`) and Snowflake setup (`snowflake/`). `public/compass.js` is the dial and belongs to the front-end design work. Start with `app/README.md`. | App sessions |
 | `../reference-loop/` | The research method and its helpers. Do not put project findings here. | Skill maintainers |
-| `new-project/video-info/` | Demo-video material: ordered source images, swap clips and continuous videos, credits, and the scripts that build them. Start with `video-info/README.md`. Apple artwork (Safari icons) stays out of git via `video-info/.gitignore`. | Video sessions |
+| `new-project/video-info/` | Demo-video material: ordered source images, swap clips and continuous videos, credits, and the scripts that build them. Start with `video-info/README.md`. Apple artwork (the Safari icons and the clips and videos built from them) stays out of git via `video-info/.gitignore`. | Video sessions |
 
 **App checks:** run `npm test` in `new-project/app/` after changing anything under `lib/`. Never commit `app/.env` or key files.
 

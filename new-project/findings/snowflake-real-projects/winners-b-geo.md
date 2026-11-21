@@ -4,6 +4,8 @@ Inspection date: 2026-11-21. Worker: research subagent, read-only. The code was 
 Labels: **verified-in-source** (the file was read; `path:line` given), **verified-in-spec** (README or Devpost only), **inferred**, **unverified** (with the next check).
 Licences: "none" means GitHub reports no licence, so the code is **for reference only**. Do not copy it.
 
+> **Written before the live check (2026-11-21).** On the team's account the database is `OVERTURE_MAPS_PLACES` (one underscore), AI functions work with no card, and bearings need `MOD(DEGREES(ST_AZIMUTH(a, b)) + 360, 360)`. The script that was actually run is `app/snowflake/setup.sql` (unencrypted key, `-nocrypt`), not the draft in [`roles-and-setup.md` §6](roles-and-setup.md). Current facts: [`live-account-check.md`](live-account-check.md).
+
 ## Headline findings
 
 1. **None of the 15 projects calls `ST_AZIMUTH`.** A GitHub code search for `ST_AZIMUTH` returns only PostGIS, H2GIS, Sedona and GoogleSQL docs. There are no Snowflake hackathon hits. A compass app built on `ST_AZIMUTH` would still be new among the projects checked.
@@ -223,7 +225,6 @@ Repo `Prarthana-sudeesh/IKU-Hackathon` @ `ae6437deff205f6e12d07ce2725b34c745b704
 - **What Snowflake does:** only the store for a Selenium scrape of university-building accessibility flags. `complete_scrape_unis.py:70-76` runs `CREATE WAREHOUSE … AUTO_SUSPEND = 60` with the comment "to protect trial credits". `:237` uses `write_pandas`. Auth is a password.
 - **The routing is not in Snowflake:** OpenRouteService `…/v2/directions/wheelchair` (`get_directions.py:22`). No code reads the Snowflake table back (inferred from grep: only the two scrape scripts mention Snowflake).
 - **The thinnest winner found.** The Devpost text says "Creating snowflake python integration for the first time".
-- **Secrets:** a `.env` file holding a non-Snowflake API key value is committed. Its contents were not copied.
 
 ### B6. Brief notes (source read for the Snowflake parts only)
 - **Unlisted** (HackTX 2026, not a winner; `aditya-khambekar/hacktx` @ `9a2ea3fcda0e9f70f5b6b050881fc4a029a43273`; licence none). The map is MapLibre, and Snowflake is a research cache.
