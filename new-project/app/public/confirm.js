@@ -16,6 +16,7 @@ const FADE = 340;
 let layer = null;
 let parts = null;
 let running = [];
+let watchdog = 0;
 
 function svg(tag, attrs) {
   const n = document.createElementNS(SVG, tag);
@@ -51,8 +52,12 @@ function build() {
   parts = { scrim, badge, ripple, disc, tick, label };
 }
 
-/** Show the blue tick with a short caption, e.g. "Invitation sent". */
+/** Show the blue tick with a short caption, e.g. "Invitation sent". Never throws. */
 export function playConfirm(text = 'Done') {
+  try { play(text); } catch (ex) { console.warn('confirm animation skipped:', ex); if (layer) layer.hidden = true; }
+}
+
+function play(text) {
   if (!layer) build();
   for (const a of running) a.cancel();
   const { scrim, badge, ripple, disc, tick, label } = parts;
@@ -116,10 +121,14 @@ export function playConfirm(text = 'Done') {
   }
 
   const mine = running;
-  Promise.all(mine.map((a) => a.finished)).then(() => {
+  const finish = () => {
     if (running !== mine) return; // a newer play took over
+    clearTimeout(watchdog);
     layer.hidden = true;
     for (const a of mine) a.cancel();
     running = [];
-  }, () => {});
+  };
+  clearTimeout(watchdog);
+  watchdog = setTimeout(finish, end + 600); // in case a finished promise never settles
+  Promise.all(mine.map((a) => a.finished)).then(finish, () => {});
 }
