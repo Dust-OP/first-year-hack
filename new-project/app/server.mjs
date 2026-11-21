@@ -6,12 +6,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createApi } from './lib/api.mjs';
-import { createLinkedin, linkedinConfigFromEnv } from './lib/linkedin.mjs';
-import { createIdTokenVerifier, logtoConfigFromEnv } from './lib/logto.mjs';
-import { createMemoryStore } from './lib/store-memory.mjs';
-import { createSnowflakeClient, snowflakeConfigFromEnv } from './lib/snowflake.mjs';
-import { createSnowflakeStore } from './lib/store-snowflake.mjs';
+import { createAppFromEnv } from './lib/setup.mjs';
 
 try { process.loadEnvFile(new URL('./.env', import.meta.url)); } catch { /* no .env: defaults apply */ }
 
@@ -21,14 +16,7 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 
-const sf = snowflakeConfigFromEnv();
-const store = sf ? createSnowflakeStore(createSnowflakeClient(sf)) : createMemoryStore();
-const logto = logtoConfigFromEnv();
-const linkedinCfg = linkedinConfigFromEnv();
-const api = createApi({
-  store, demo: process.env.DEMO !== '0', logto, verifyIdToken: logto && createIdTokenVerifier(logto),
-  linkedin: linkedinCfg && createLinkedin(linkedinCfg), publicUrl: process.env.PUBLIC_URL || null,
-});
+const { api, store, logto, linkedinCfg } = await createAppFromEnv();
 
 async function serveStatic(pathname, res) {
   // /callback is where Logto sends the browser back after sign-in; the page itself finishes the job.

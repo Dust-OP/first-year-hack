@@ -2,7 +2,9 @@
 
 Working title. A phone web app for **Track 2: Retro Remix**: the compass no longer points north, it points at the person nearby you should be working with.
 
-Built 21 Nov 2026. No dependencies: Node 20+ only.
+Built 21 Nov 2026. Node 20+. Locally it runs with no install; the one dependency (the Neon Postgres driver) is loaded only when `DATABASE_URL` is set.
+
+**Live:** https://career-compass-hazel-ten.vercel.app (Vercel project `career-compass`, team `chatgpt-6e55`). See [Deploy on Vercel](#deploy-on-vercel).
 
 ## The flow
 
@@ -100,6 +102,7 @@ Android only (Chrome):
 | Compass heading from the phone sensor | Written and run in a browser, **not yet run on a phone**. On 21 Nov in headless Chromium 156: Chrome's own virtual orientation sensor (real `deviceorientationabsolute` events, only the hardware pretend) gave the expected heading, to the two decimal places the readout prints, for 24 attitudes: flat, tilted, upright and in both landscapes, including five where the old `360 - alpha` was 20° to 180° out (upright with the wrist twisted; a landscape camera hold leaning past vertical). Those 24 were run with the blend at 50° to 75° of lift; after it moved to 65° to 80° the same virtual sensor was run again for 52 attitudes, portrait and both landscapes: outside the blend the heading was the expected one to within 0.1° (Chrome rounds the angles it sends to 0.1°), a 20° roll of the wrist moved it by 0.00° up to 65° of lift, and the flip came between 21.0° and 21.1° past vertical. Events built in the page covered the iPhone shape (`webkitCompassHeading`, accuracy, the permission answer), missing readings and the fallbacks. What only a phone can show is listed under *What to check on a phone* |
 | Dial physics, lock-on and the picture reveal | Works in Chromium at phone and laptop size, light and dark, and with reduced motion. Measured in the page at 60 frames a second: the dial overshoots a quarter turn by 9.5% and is inside 2% after 0.47 s; a 3 s stall moves it one frame's worth, not three seconds' worth. Safari and Firefox were not run |
 | Profile pictures | The dial shows `picture` when a person carries one (a URL, or `null`). **The server on this branch does not send it yet**, so today everyone appears as large initials. Checked with pictures added to the server's answers on their way to the page: a good one, `null`, slow, missing (404) and not-an-image |
+| Vercel deployment | Deployed 21 Nov (production, London region `lhr1`). Health, static files, `/callback` and the API routes checked on the live URL. **Runs on the in-memory store until the Neon database is connected**; see below |
 | Snowflake as the database | **Works on the team's account** (checked 21 Nov, about 13:00): `npm run snowflake:check` passes, and sign-up, position, nearby, invite and accept were run through the live server on the Snowflake store. Snowflake's bearing matches our own maths (Bush House → Big Ben: 199.87° both). Without `.env` the app falls back to an in-memory store |
 | Sending the LinkedIn connection request for the user | **Not possible, by LinkedIn's rules.** See below |
 
@@ -198,6 +201,30 @@ This has not been done. A test browser stands in for the phones' GPS, not for th
 - A picked photo is stored as it was sent (a 256 px JPEG made in the browser; the original file is not uploaded). The API can replace or remove it (`POST /api/profile` with `photo`), but the page shows the profile form only once, so there is no way in the page yet to change or remove a photo afterwards. There is no delete-account route, and none is planned.
 - Text taken from an address is never displayed. A failed sign-in comes back as a short code and the page shows its own sentence for it.
 
+## Deploy on Vercel
+
+The same API runs as one Vercel Function: `api/index.mjs` builds it with `lib/setup.mjs`, exactly as `server.mjs` does locally. `vercel.json` sends every `/api/*` request to that function, serves `public/` as static files, rewrites `/callback` to the page and pins the function to London (`lhr1`). `.vercelignore` keeps `.env`, keys, tests and the Snowflake scripts out of the upload.
+
+**Database.** Serverless functions do not share memory, so the deployed app needs a real database: Neon Postgres from the Vercel Marketplace. The integration sets `DATABASE_URL` on the project; `lib/store-postgres.mjs` then creates its three tables (`users`, `locations`, `requests`) on first use. Bearing and distance are computed in JS after a bounding-box query, so no PostGIS is needed. Store choice everywhere: `DATABASE_URL` → Postgres, else `SNOWFLAKE_ACCOUNT` → Snowflake, else memory.
+
+Logto keeps its own accounts in its own database on the self-hosted server. This database holds the app's side: the profile linked to each Logto user id (`logto_sub`), session token hashes, positions and invitations.
+
+Set up once, from `new-project/app` (a person has to accept Neon's terms):
+
+```sh
+vercel link --yes --scope chatgpt-6e55 --project career-compass   # already done on 21 Nov
+vercel integration add neon --name career-compass-db --meta region=lhr1
+vercel env pull .env.local        # DATABASE_URL for local checks; .env.local is git-ignored
+npm install
+npm run db:check                  # full flow in a throwaway schema, then drops it
+vercel env add DEMO production    # value 1 keeps the demo button and quick sign-up
+vercel deploy --prod
+```
+
+To switch on email sign-in on the live site, add `https://career-compass-hazel-ten.vercel.app/callback` (redirect) and `https://career-compass-hazel-ten.vercel.app` (post sign-out) to the Logto application, then `vercel env add LOGTO_APP_ID production` and deploy again.
+
+Deployment URLs (`career-compass-<hash>-…vercel.app`) sit behind Vercel Authentication; the production address above is public. GitHub is not connected to the project, so a push does not deploy.
+
 ## Snowflake
 
 The Snowflake store keeps users, positions and invitations in three tables and lets **Snowflake compute the compass**: `ST_DWITHIN` finds who is in range, `ST_DISTANCE` the distance and `ST_AZIMUTH` the bearing. The research in `../findings/snowflake-real-projects/` found no hackathon project doing bearings in Snowflake. The *Demo tools* panel shows the exact SQL, row count and latency of the last query, for the judges.
@@ -226,6 +253,9 @@ To migrate, when the owner decides: in Snowsight, run the block marked "Added 21
 | Path | What it is |
 |---|---|
 | `server.mjs` | Local server: static files plus the API |
+| `api/index.mjs`, `vercel.json`, `.vercelignore` | Vercel entry point and config |
+| `lib/setup.mjs` | Picks the store and sign-in from environment variables; shared by both entry points |
+| `lib/store-postgres.mjs`, `postgres/check.mjs` | Postgres store (Neon on Vercel) and its one-command check |
 | `lib/api.mjs` | All API routes as one `(Request) => Response` function |
 | `lib/logto.mjs`, `public/auth.js` | Email sign-in: server-side ID token check, browser-side OpenID Connect flow |
 | `dev/mock-oidc.mjs` | Local stand-in for Logto, for tests and offline tries |

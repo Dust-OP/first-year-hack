@@ -67,7 +67,7 @@ first-year-hack/                  repository root
 | `findings/<topic>/RESULT.md` or `SUMMARY.md` | The decision-ready summary: recommendation, limits, adoption state, next check. | The research owner for that topic |
 | `findings/<topic>/*.md` | Detailed worker reports: per-candidate data, quotes, status labels. | Research workers |
 | `findings/<topic>/evidence/` | Source notes (`E-*.json`) from `reference-loop/loop.mjs note`. | Research sessions |
-| `new-project/app/` | The product: a zero-dependency Node server (`server.mjs`, `lib/`), the phone UI (`public/`), tests (`test/`) and Snowflake setup (`snowflake/`). `public/compass.js` is the dial and belongs to the front-end design work. Start with `app/README.md`. | App sessions |
+| `new-project/app/` | The product: a Node server (`server.mjs`, `lib/`), the Vercel entry point (`api/`, `vercel.json`), the phone UI (`public/`), tests (`test/`), Snowflake setup (`snowflake/`) and the Postgres check (`postgres/`). `public/compass.js` is the dial and belongs to the front-end design work. Start with `app/README.md`. | App sessions |
 | `../reference-loop/` | The research method and its helpers. Do not put project findings here. | Skill maintainers |
 | `new-project/video-info/` | Demo-video material: ordered source images, swap clips and continuous videos, credits, and the scripts that build them. Start with `video-info/README.md`. Apple artwork (the Safari icons and the clips and videos built from them) stays out of git via `video-info/.gitignore`. | Video sessions |
 
@@ -93,4 +93,5 @@ first-year-hack/                  repository root
 - **Reddit opinion on compass UI designs** has not been read; automated access was blocked. A teammate should check it in a normal browser and add it to `findings/compass-frontend-design/`.
 - **Event rules on track and prize stacking** are unconfirmed. Ask the organisers; the question text is in `findings/retro-compass-prior-art/rules-snowflake.md`.
 - **The app has not been run on a phone yet.** First check: open `app/` over HTTPS on one iPhone and one Android phone, outdoors, and record what the heading does.
+- **Deployed on Vercel** (21 Nov): project `career-compass`, https://career-compass-hazel-ten.vercel.app. The Neon Postgres database still has to be added by a person (terms acceptance); until then the live site runs on the in-memory store. Steps in `app/README.md` under *Deploy on Vercel*.
 - **Snowflake works on the team's account** (checked 21 Nov): `npm run snowflake:check` passes and the full flow ran on the Snowflake store. The account settings live in the untracked `app/.env`.
